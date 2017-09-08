@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestTrade(t *testing.T) {
+func TestTrades(t *testing.T) {
 	payload := []byte(`{
     "success": true,
     "payload": [{
@@ -26,7 +26,7 @@ func TestTrade(t *testing.T) {
         "tid": 55844
     }]
 }`)
-	var tradeResponse TradeResponse
+	var tradeResponse TradesResponse
 	err := json.Unmarshal(payload, &tradeResponse)
 	assert.NoError(t, err)
 

@@ -1,9 +1,5 @@
 package bitso
 
-import (
-	"time"
-)
-
 // Ticker holds trading information from an specific book.
 type Ticker struct {
 	// Order book symbol
@@ -31,5 +27,5 @@ type Ticker struct {
 	Bid Monetary `json:"bid"`
 
 	// When this ticker was generated
-	CreatedAt time.Time `json:"created_at"`
+	CreatedAt Time `json:"created_at"`
 }

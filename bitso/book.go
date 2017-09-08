@@ -12,12 +12,26 @@ type Book struct {
 	minor Currency
 }
 
+func NewBook(major Currency, minor Currency) *Book {
+	return &Book{major: major, minor: minor}
+}
+
 func (b Book) Major() Currency {
 	return b.major
 }
 
 func (b Book) Minor() Currency {
 	return b.minor
+}
+
+func (b Book) String() string {
+	if currencyNames[b.major] == "" {
+		panic("missing major")
+	}
+	if currencyNames[b.minor] == "" {
+		panic("missing minor")
+	}
+	return currencyNames[b.major] + "_" + currencyNames[b.minor]
 }
 
 func (b Book) MarshalJSON() ([]byte, error) {
@@ -27,7 +41,7 @@ func (b Book) MarshalJSON() ([]byte, error) {
 	if currencyNames[b.minor] == "" {
 		return nil, errors.New("fail to encode minor")
 	}
-	return json.Marshal(fmt.Sprintf("%q", currencyNames[b.major]+"_"+currencyNames[b.minor]))
+	return json.Marshal(fmt.Sprintf("%q", b.String()))
 }
 
 func (b *Book) UnmarshalJSON(in []byte) error {
