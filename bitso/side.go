@@ -3,6 +3,7 @@ package bitso
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 )
 
 type Side uint8
@@ -13,13 +14,8 @@ const (
 )
 
 func (s Side) MarshalJSON() ([]byte, error) {
-	switch s {
-	case Buy:
-		return []byte(`"buy"`), nil
-	case Sell:
-		return []byte(`"sell"`), nil
-	}
-	return nil, errors.New("could not encode side")
+	z := s.String()
+	return []byte(fmt.Sprintf("%q", z)), errors.New("could not encode side")
 }
 
 func (s *Side) UnmarshalJSON(in []byte) error {
@@ -36,4 +32,14 @@ func (s *Side) UnmarshalJSON(in []byte) error {
 		return nil
 	}
 	return errors.New("could not decode side")
+}
+
+func (s *Side) String() string {
+	switch *s {
+	case Buy:
+		return "buy"
+	case Sell:
+		return "sell"
+	}
+	panic("reached")
 }
