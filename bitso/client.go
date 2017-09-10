@@ -1,7 +1,12 @@
 package bitso
 
 import (
+	"bytes"
+	"crypto/hmac"
+	"crypto/sha256"
 	"encoding/json"
+	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -10,7 +15,7 @@ import (
 )
 
 var (
-	debug = true
+	debug = false
 )
 
 const (
@@ -24,11 +29,14 @@ var (
 )
 
 func NewClient(httpClient *http.Client) *Client {
+	if httpClient == nil {
+		httpClient = http.DefaultClient
+	}
 	c := &Client{
 		client:  httpClient,
 		tickets: make(chan struct{}, defaultTickets),
 
-		Version:   "v3",
+		version:   "v3",
 		BurstRate: defaultBurstRate,
 	}
 	for i := 0; i < defaultTickets; i++ {
@@ -40,17 +48,25 @@ func NewClient(httpClient *http.Client) *Client {
 type Client struct {
 	client *http.Client
 
-	Key     string
-	Secret  string
-	Version string
+	key     string
+	secret  string
+	version string
 
 	tickets chan struct{}
 
 	BurstRate time.Duration
 }
 
+func (c *Client) SetKey(key string) {
+	c.key = key
+}
+
+func (c *Client) SetSecret(secret string) {
+	c.secret = secret
+}
+
 func (c *Client) EndpointURL(endpoint string) (*url.URL, error) {
-	return url.Parse(apiPrefix + c.Version + "/" + endpoint)
+	return url.Parse(apiPrefix + c.version + "/" + endpoint)
 }
 
 func (c *Client) lock() {
@@ -84,6 +100,46 @@ func (c *Client) debugf(f string, a ...interface{}) {
 	log.Printf(f, a...)
 }
 
+func (c *Client) newRequest(method string, uri string, body io.Reader) (*http.Request, error) {
+	nonce := time.Now().UnixNano()
+
+	var buf []byte
+
+	if body != nil {
+		var err error
+		buf, err = ioutil.ReadAll(body)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	req, err := http.NewRequest(method, uri, bytes.NewBuffer(buf))
+	if err != nil {
+		return nil, err
+	}
+
+	if c.key == "" && c.secret == "" {
+		// Return unsigned request
+		return req, nil
+	}
+
+	u, err := url.Parse(uri)
+	if err != nil {
+		return nil, err
+	}
+
+	message := fmt.Sprintf("%d%s%s%s", nonce, method, u.Path, string(buf))
+
+	mac := hmac.New(sha256.New, []byte(c.secret))
+	mac.Write([]byte(message))
+	signature := fmt.Sprintf("%x", mac.Sum(nil))
+
+	authHeader := fmt.Sprintf("Bitso %s:%d:%s", c.key, nonce, signature)
+	req.Header.Set("Authorization", authHeader)
+
+	return req, err
+}
+
 func (c *Client) getResponse(endpoint string, params url.Values, dest interface{}) error {
 	u, err := c.EndpointURL(endpoint)
 	if err != nil {
@@ -91,7 +147,12 @@ func (c *Client) getResponse(endpoint string, params url.Values, dest interface{
 	}
 	u.RawQuery = params.Encode()
 
-	res, err := c.Get(u.String())
+	req, err := c.newRequest("GET", u.String(), nil)
+	if err != nil {
+		return err
+	}
+
+	res, err := c.client.Do(req)
 	if err != nil {
 		return err
 	}
@@ -114,6 +175,14 @@ func (c *Client) getResponse(endpoint string, params url.Values, dest interface{
 func (c *Client) Trades(params url.Values) (*TradesResponse, error) {
 	var res TradesResponse
 	if err := c.getResponse("/trades", params, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *Client) Fundings(params url.Values) (*FundingsResponse, error) {
+	var res FundingsResponse
+	if err := c.getResponse("/fundings", params, &res); err != nil {
 		return nil, err
 	}
 	return &res, nil

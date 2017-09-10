@@ -32,8 +32,14 @@ type OrderBookResponse struct {
 	} `json:"payload"`
 }
 
-// TradesResponse represents the response from /v3/trades
+// TradesResponse represents a response from /v3/trades
 type TradesResponse struct {
 	Envelope
 	Payload []Trade `json:"payload"`
+}
+
+// FundingsResponse represents a response from /v3/fundings/
+type FundingsResponse struct {
+	Envelope
+	Payload []Funding `json:"payload"`
 }
