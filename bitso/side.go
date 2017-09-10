@@ -3,43 +3,43 @@ package bitso
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 )
 
-type Side uint8
+type OrderSide uint8
 
 const (
-	Buy Side = iota
-	Sell
+	OrderSideNone OrderSide = iota
+
+	OrderSideBuy
+	OrderSideSell
 )
 
-func (s Side) MarshalJSON() ([]byte, error) {
-	z := s.String()
-	return []byte(fmt.Sprintf("%q", z)), errors.New("could not encode side")
+var orderSides = map[OrderSide]string{
+	OrderSideBuy:  "buy",
+	OrderSideSell: "sell",
 }
 
-func (s *Side) UnmarshalJSON(in []byte) error {
+func (s OrderSide) MarshalJSON() ([]byte, error) {
+	return json.Marshal(s.String())
+}
+
+func (s *OrderSide) UnmarshalJSON(in []byte) error {
 	var z string
 	if err := json.Unmarshal(in, &z); err != nil {
 		return err
 	}
-	switch z {
-	case "buy":
-		*s = Buy
-		return nil
-	case "sell":
-		*s = Sell
-		return nil
+	for side, name := range orderSides {
+		if z == name {
+			*s = side
+			return nil
+		}
 	}
-	return errors.New("could not decode side")
+	return errors.New("unsupported order side")
 }
 
-func (s *Side) String() string {
-	switch *s {
-	case Buy:
-		return "buy"
-	case Sell:
-		return "sell"
+func (s *OrderSide) String() string {
+	if z, ok := orderSides[*s]; ok {
+		return z
 	}
-	panic("reached")
+	panic("unsupported order side")
 }

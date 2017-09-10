@@ -1,6 +1,7 @@
 package bitso
 
 import (
+	"encoding/json"
 	"errors"
 )
 
@@ -9,8 +10,9 @@ type Currency uint8
 
 // Currencies
 const (
-	XRP Currency = iota
+	CurrencyNone Currency = iota
 
+	XRP
 	BCH
 	BTC
 	ETH
@@ -32,4 +34,29 @@ func getCurrencyByName(name string) (*Currency, error) {
 		}
 	}
 	return nil, errors.New("no such currency")
+}
+
+func (c Currency) MarshalJSON() ([]byte, error) {
+	return json.Marshal(c.String())
+}
+
+func (c *Currency) UnmarshalJSON(in []byte) error {
+	var z string
+	if err := json.Unmarshal(in, &z); err != nil {
+		return err
+	}
+	for k, v := range currencyNames {
+		if v == z {
+			*c = k
+			return nil
+		}
+	}
+	return errors.New("unsupported currency")
+}
+
+func (c Currency) String() string {
+	if z, ok := currencyNames[c]; ok {
+		return z
+	}
+	panic("invalid currency")
 }
