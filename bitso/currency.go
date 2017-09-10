@@ -3,6 +3,7 @@ package bitso
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 )
 
 // Currency represents currencies
@@ -17,6 +18,7 @@ const (
 	BTC
 	ETH
 	MXN
+	ETC
 )
 
 var currencyNames = map[Currency]string{
@@ -25,6 +27,7 @@ var currencyNames = map[Currency]string{
 	MXN: "mxn",
 	BTC: "btc",
 	BCH: "bch",
+	ETC: "etc",
 }
 
 func getCurrencyByName(name string) (*Currency, error) {
@@ -51,12 +54,12 @@ func (c *Currency) UnmarshalJSON(in []byte) error {
 			return nil
 		}
 	}
-	return errors.New("unsupported currency")
+	return fmt.Errorf("unsupported currency: %v", z)
 }
 
 func (c Currency) String() string {
 	if z, ok := currencyNames[c]; ok {
 		return z
 	}
-	panic("invalid currency")
+	panic("unsupported currency")
 }

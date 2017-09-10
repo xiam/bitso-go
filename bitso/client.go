@@ -76,18 +76,11 @@ func (c *Client) lock() {
 }
 
 func (c *Client) Get(uri string) (*http.Response, error) {
-	c.debugf("Waiting...")
-
 	<-c.tickets
-	c.debugf("Get")
-	defer func() {
-		c.debugf("Done!")
-	}()
 
 	ticker := time.NewTicker(c.BurstRate)
 	go func() {
 		<-ticker.C
-		c.debugf("Next!")
 		c.tickets <- struct{}{}
 	}()
 
@@ -163,6 +156,8 @@ func (c *Client) doRequest(method string, endpoint string, params url.Values, bo
 	if err != nil {
 		return err
 	}
+
+	c.debugf("res: %v", string(buf))
 
 	if err := json.Unmarshal(buf, dest); err != nil {
 		return err

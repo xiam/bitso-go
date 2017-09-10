@@ -41,7 +41,9 @@ type TradesResponse struct {
 // Balance represents a response from /v3/balance
 type BalanceResponse struct {
 	Envelope
-	Payload []Balance `json:"payload"`
+	Payload struct {
+		Balances []Balance `json:"balances"`
+	} `json:"payload"`
 }
 
 // Fees represents a response from /v3/fees
