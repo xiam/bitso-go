@@ -1,11 +1,15 @@
 package bitso
 
+import (
+	"fmt"
+)
+
 // Envelope represents a common response envelope from Bitso API.
 type Envelope struct {
 	Success bool `json:"success"`
 	Error   struct {
-		Code    string `json:"code"`
-		Message string `json:"message"`
+		Code    interface{} `json:"code"`
+		Message string      `json:"message"`
 	} `json:"error,omitempty"`
 }
 
@@ -79,16 +83,23 @@ type UserOrderTradesResponse struct {
 	Payload []UserOrderTrade `json:"payload"`
 }
 
-// OrdersResponse represents a response from /v3/open_orders or /v3/lookup_orders
 type OrdersResponse struct {
-	Envelope
 	Payload []UserOrder `json:"payload"`
 }
 
-// NewOrderResponse represents a response from /v3/orders
-type NewOrderResponse struct {
-	Envelope
-	Payload struct {
-		OID string `json:"oid"`
-	} `json:"payload"`
+type Error struct {
+	code    int
+	message string
+}
+
+func (e Error) Error() string {
+	return fmt.Sprintf("Error %v: %s", e.code, e.message)
+}
+
+func (e Error) Code() int {
+	return e.code
+}
+
+func apiError(code int, message string) error {
+	return &Error{code: code, message: message}
 }

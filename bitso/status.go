@@ -2,7 +2,7 @@ package bitso
 
 import (
 	"encoding/json"
-	"errors"
+	"fmt"
 )
 
 type Status uint8
@@ -34,7 +34,7 @@ func (s *Status) UnmarshalJSON(in []byte) error {
 			return nil
 		}
 	}
-	return errors.New("unsupported status")
+	return fmt.Errorf("unsupported status: %v", z)
 }
 
 func (s *Status) String() string {

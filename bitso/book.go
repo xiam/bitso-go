@@ -2,8 +2,6 @@ package bitso
 
 import (
 	"encoding/json"
-	"errors"
-	"fmt"
 	"strings"
 )
 
@@ -35,13 +33,7 @@ func (b Book) String() string {
 }
 
 func (b Book) MarshalJSON() ([]byte, error) {
-	if currencyNames[b.major] == "" {
-		return nil, errors.New("fail to encode major")
-	}
-	if currencyNames[b.minor] == "" {
-		return nil, errors.New("fail to encode minor")
-	}
-	return json.Marshal(fmt.Sprintf("%q", b.String()))
+	return json.Marshal(b.String())
 }
 
 func (b *Book) UnmarshalJSON(in []byte) error {

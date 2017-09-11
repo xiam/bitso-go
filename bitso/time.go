@@ -39,3 +39,7 @@ func (t *Time) UnmarshalJSON(in []byte) error {
 	*t = Time(z)
 	return nil
 }
+
+func (t Time) String() string {
+	return time.Time(t).Format(iso8601Time)
+}

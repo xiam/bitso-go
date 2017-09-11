@@ -11,6 +11,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -67,7 +68,7 @@ func (c *Client) SetSecret(secret string) {
 }
 
 func (c *Client) EndpointURL(endpoint string) (*url.URL, error) {
-	return url.Parse(apiPrefix + c.version + "/" + endpoint)
+	return url.Parse(apiPrefix + c.version + endpoint)
 }
 
 func (c *Client) lock() {
@@ -107,9 +108,16 @@ func (c *Client) newRequest(method string, uri string, body io.Reader) (*http.Re
 		}
 	}
 
+	c.debugf("req: %v", string(buf))
+
 	req, err := http.NewRequest(method, uri, bytes.NewBuffer(buf))
 	if err != nil {
 		return nil, err
+	}
+
+	if method == "POST" {
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Accept", "application/json")
 	}
 
 	if c.key == "" && c.secret == "" {
@@ -122,7 +130,8 @@ func (c *Client) newRequest(method string, uri string, body io.Reader) (*http.Re
 		return nil, err
 	}
 
-	message := fmt.Sprintf("%d%s%s%s", nonce, method, u.Path, string(buf))
+	message := fmt.Sprintf("%d%s%s%s", nonce, method, u.RequestURI(), string(buf))
+	c.debugf("message: %v", message)
 
 	mac := hmac.New(sha256.New, []byte(c.secret))
 	mac.Write([]byte(message))
@@ -157,7 +166,19 @@ func (c *Client) doRequest(method string, endpoint string, params url.Values, bo
 		return err
 	}
 
+	c.debugf("res: %#v", res)
 	c.debugf("res: %v", string(buf))
+
+	var env Envelope
+	if err := json.Unmarshal(buf, &env); err != nil {
+		return err
+	}
+	c.debugf("env: %#v", env)
+	if !env.Success {
+		code := fmt.Sprintf("%v", env.Error.Code)
+		i, _ := strconv.Atoi(code)
+		return apiError(i, env.Error.Message)
+	}
 
 	if err := json.Unmarshal(buf, dest); err != nil {
 		return err
@@ -175,6 +196,7 @@ func (c *Client) getResponse(endpoint string, params url.Values, dest interface{
 }
 
 func (c *Client) postResponse(endpoint string, body interface{}, dest interface{}) error {
+	//	debug = true
 	buf, err := json.Marshal(body)
 	if err != nil {
 		return err
@@ -291,12 +313,12 @@ func (c *Client) UserOrderTrades(oid string, params url.Values) (*UserOrderTrade
 }
 
 // OpenOrders a list of the user's open orders.
-func (c *Client) OpenOrders(params url.Values) (*OrdersResponse, error) {
+func (c *Client) OpenOrders(params url.Values) ([]UserOrder, error) {
 	var res OrdersResponse
 	if err := c.getResponse("/open_orders", params, &res); err != nil {
 		return nil, err
 	}
-	return &res, nil
+	return res.Payload, nil
 }
 
 // LookupOrders returns a list of details for 1 or more orders
@@ -309,20 +331,31 @@ func (c *Client) LookupOrders(oids []string) (*OrdersResponse, error) {
 }
 
 // CancelOrders cancels open order(s)
-func (c *Client) CancelOrders(oids []string) (*OrdersResponse, error) {
-	var res OrdersResponse
+func (c *Client) CancelOrders(oids []string) ([]string, error) {
+	var res struct {
+		Payload []string `json:"payload"`
+	}
 	if err := c.deleteResponse("/orders/"+strings.Join(oids, "-"), nil, &res); err != nil {
 		return nil, err
 	}
-	return &res, nil
+	return res.Payload, nil
+}
+
+// CancelOrder cancels an open order
+func (c *Client) CancelOrder(oid string) ([]string, error) {
+	return c.CancelOrders([]string{oid})
 }
 
 // PlaceOrder places a buy or sell order (both limit and market orders are
 // available)
-func (c *Client) PlaceOrder(order *OrderPlacement) (*NewOrderResponse, error) {
-	var res NewOrderResponse
-	if err := c.postResponse("/orders/", order, &res); err != nil {
-		return nil, err
+func (c *Client) PlaceOrder(order *OrderPlacement) (string, error) {
+	var res struct {
+		Payload struct {
+			OID string `json:"oid"`
+		} `json:"payload"`
 	}
-	return &res, nil
+	if err := c.postResponse("/orders/", order, &res); err != nil {
+		return "", err
+	}
+	return res.Payload.OID, nil
 }

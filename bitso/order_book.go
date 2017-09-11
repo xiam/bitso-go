@@ -81,7 +81,7 @@ type OrderPlacement struct {
 	Book  Book      `json:"book"`
 	Side  OrderSide `json:"side"`
 	Type  OrderType `json:"type"`
-	Major Monetary  `json:"major"`
-	Minor Monetary  `json:"minor"`
-	Price Monetary  `json:"price"`
+	Major Monetary  `json:"major,omitempty"`
+	Minor Monetary  `json:"minor,omitempty"`
+	Price Monetary  `json:"price,omitempty"`
 }
