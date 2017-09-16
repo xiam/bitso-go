@@ -39,10 +39,12 @@ func getCurrencyByName(name string) (*Currency, error) {
 	return nil, errors.New("no such currency")
 }
 
+// MarshalJSON implements json.Marshaler
 func (c Currency) MarshalJSON() ([]byte, error) {
 	return json.Marshal(c.String())
 }
 
+// UnmarshalJSON implements json.Unmarshaler
 func (c *Currency) UnmarshalJSON(in []byte) error {
 	var z string
 	if err := json.Unmarshal(in, &z); err != nil {

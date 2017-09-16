@@ -2,12 +2,14 @@ package bitso
 
 import (
 	"encoding/json"
-	"github.com/gorilla/websocket"
 	"log"
+
+	"github.com/gorilla/websocket"
 )
 
 const wssURL = `wss://ws.bitso.com`
 
+// WebsocketReply represents a generic reply from a channel.
 type WebsocketReply struct {
 	Action   string      `json:"action"`
 	Response string      `json:"response"`
@@ -16,6 +18,7 @@ type WebsocketReply struct {
 	Payload  interface{} `json:"payload,omitempty"`
 }
 
+// WebsocketTrade represents a message from the "trades" channel.
 type WebsocketTrade struct {
 	Book    Book
 	Payload []struct {
@@ -28,6 +31,7 @@ type WebsocketTrade struct {
 	}
 }
 
+// WebsocketDiffOrder represents a message from the "diff-orders" channel.
 type WebsocketDiffOrder struct {
 	Book    Book
 	Payload []struct {
@@ -40,6 +44,7 @@ type WebsocketDiffOrder struct {
 	}
 }
 
+// WebsocketOrder represents a message from the "diff-orders" channel.
 type WebsocketOrder struct {
 	Book    Book
 	Payload struct {
@@ -60,12 +65,15 @@ type WebsocketOrder struct {
 	} `json:"payload"`
 }
 
+// WebsocketMessage represents a message that can be sent to channel.
 type WebsocketMessage struct {
 	Action string `json:"action"`
 	Book   *Book  `json:"book"`
 	Type   string `json:"type"`
 }
 
+// A Websocket establishes a connection with Bitso's websocket service to send
+// and receive messages over the ws protocol.
 type Websocket struct {
 	endpoint string
 	conn     *websocket.Conn
@@ -73,10 +81,13 @@ type Websocket struct {
 	inbox chan interface{}
 }
 
+// Receive returns a channel where received messages are sent.
 func (ws *Websocket) Receive() chan interface{} {
 	return ws.inbox
 }
 
+// NewWebsocket creates a websocket handler and establishes a connection with
+// Bitso's websocket servers.
 func NewWebsocket() (*Websocket, error) {
 	ws := &Websocket{
 		endpoint: wssURL,
@@ -147,6 +158,7 @@ func NewWebsocket() (*Websocket, error) {
 	return ws, nil
 }
 
+// Close closes the active connection with Bitso's websocket servers.
 func (ws *Websocket) Close() error {
 	if ws.conn != nil {
 		return ws.conn.Close()
@@ -154,11 +166,12 @@ func (ws *Websocket) Close() error {
 	return nil
 }
 
-func (ws *Websocket) Subscribe(book *Book, messageType string) error {
+// Subscribe subscribes to a messages channel.
+func (ws *Websocket) Subscribe(book *Book, channelName string) error {
 	m := WebsocketMessage{
 		Action: "subscribe",
 		Book:   book,
-		Type:   messageType,
+		Type:   channelName,
 	}
 	return ws.conn.WriteJSON(m)
 }

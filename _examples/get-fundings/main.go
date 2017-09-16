@@ -1,9 +1,10 @@
 package main
 
 import (
-	"github.com/mazingstudio/bitso-go/bitso"
 	"log"
 	"os"
+
+	"github.com/mazingstudio/bitso-go/bitso"
 )
 
 func main() {

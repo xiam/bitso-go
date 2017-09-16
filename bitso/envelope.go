@@ -13,89 +13,18 @@ type Envelope struct {
 	} `json:"error,omitempty"`
 }
 
-// AvailableBooksResponse represents the response from /v3/available_books.
-type AvailableBooksResponse struct {
-	Envelope
-	Payload []ExchangeOrderBook `json:"payload"`
-}
-
-// TickerResponse
-type TickerResponse struct {
-	Envelope
-	Payload Ticker `json:"payload"`
-}
-
-// OrderBookResponse
-type OrderBookResponse struct {
-	Envelope
-	Payload struct {
-		Asks      []Ask  `json:"asks"`
-		Bids      []Bid  `json:"bids"`
-		UpdatedAt Time   `json:"updated_at"`
-		Sequence  string `json:"sequence"`
-	} `json:"payload"`
-}
-
-// TradesResponse represents a response from /v3/trades
-type TradesResponse struct {
-	Envelope
-	Payload []Trade `json:"payload"`
-}
-
-// Balance represents a response from /v3/balance
-type BalanceResponse struct {
-	Envelope
-	Payload struct {
-		Balances []Balance `json:"balances"`
-	} `json:"payload"`
-}
-
-// Fees represents a response from /v3/fees
-type FeesResponse struct {
-	Envelope
-	Payload struct {
-		Fees           []Fee          `json:"fees"`
-		WithdrawalFees WithdrawalFees `json:"withdrawal_fees"`
-	} `json:"payload"`
-}
-
-// Ledger represents a response from /v3/ledger
-type LedgerResponse struct {
-	Envelope
-	Payload []Transaction `json:"payload"`
-}
-
-// FundingsResponse represents a response from /v3/fundings/
-type FundingsResponse struct {
-	Envelope
-	Payload []Funding `json:"payload"`
-}
-
-// UserTradesResponse represents a response from /v3/user_trades/
-type UserTradesResponse struct {
-	Envelope
-	Payload []UserTrade `json:"payload"`
-}
-
-// UserOrderTradesResponse represents a response from /v3/user_order_trades/
-type UserOrderTradesResponse struct {
-	Envelope
-	Payload []UserOrderTrade `json:"payload"`
-}
-
-type OrdersResponse struct {
-	Payload []UserOrder `json:"payload"`
-}
-
+// Error represents an API error
 type Error struct {
 	code    int
 	message string
 }
 
+// Error returns the error message.
 func (e Error) Error() string {
 	return fmt.Sprintf("Error %v: %s", e.code, e.message)
 }
 
+// Code returns the error code.
 func (e Error) Code() int {
 	return e.code
 }

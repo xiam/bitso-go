@@ -1,49 +1,14 @@
 package bitso
 
-import (
-	"encoding/json"
-	"errors"
-)
-
-type OrderType uint8
-
-const (
-	OrderTypeNone OrderType = iota
-
-	OrderTypeMarket
-	OrderTypeLimit
-)
-
-var orderTypes = map[OrderType]string{
-	OrderTypeMarket: "market",
-	OrderTypeLimit:  "limit",
+// OrderBook represents a response from /v3/order_book
+type OrderBook struct {
+	Asks      []Order `json:"asks"`
+	Bids      []Order `json:"bids"`
+	UpdatedAt Time    `json:"updated_at"`
+	Sequence  string  `json:"sequence"`
 }
 
-func (o OrderType) MarshalJSON() ([]byte, error) {
-	return json.Marshal(o.String())
-}
-
-func (o *OrderType) UnmarshalJSON(in []byte) error {
-	var z string
-	if err := json.Unmarshal(in, &z); err != nil {
-		return err
-	}
-	for k, v := range orderTypes {
-		if v == z {
-			*o = k
-			return nil
-		}
-	}
-	return errors.New("unsupported order type")
-}
-
-func (o OrderType) String() string {
-	if z, ok := orderTypes[o]; ok {
-		return z
-	}
-	panic("unsupported order type")
-}
-
+// Order represents a public order.
 type Order struct {
 	// Order book symbol
 	Book Book `json:"book"`
@@ -55,33 +20,33 @@ type Order struct {
 	Oid string `json:"oid"`
 }
 
-type Ask struct {
-	Order
-}
-
-type Bid struct {
-	Order
-}
-
+// UserOrder represents an order from the current user.
 type UserOrder struct {
-	Book           Book      `json:"book"`
-	OriginalAmount Monetary  `json:"original_amount"`
-	UnfilledAmount Monetary  `json:"unfilled_amount"`
-	OriginalValue  Monetary  `json:"original_value"`
-	CreatedAt      Time      `json:"created_at"`
-	UpdatedAt      Time      `json:"updated_at"`
-	Price          Monetary  `json:"price"`
-	OID            string    `json:"oid"`
-	Side           OrderSide `json:"side"`
-	Status         Status    `json:"status"`
-	Type           string    `json:"type"`
+	Book Book `json:"book"`
+
+	OriginalAmount Monetary `json:"original_amount"`
+	UnfilledAmount Monetary `json:"unfilled_amount"`
+	OriginalValue  Monetary `json:"original_value"`
+
+	CreatedAt Time `json:"created_at"`
+	UpdatedAt Time `json:"updated_at"`
+
+	Price Monetary `json:"price"`
+	OID   string   `json:"oid"`
+
+	Side   OrderSide   `json:"side"`
+	Status OrderStatus `json:"status"`
+	Type   string      `json:"type"`
 }
 
+// OrderPlacement represents an order that can be set by the user.
 type OrderPlacement struct {
-	Book  Book      `json:"book"`
-	Side  OrderSide `json:"side"`
-	Type  OrderType `json:"type"`
-	Major Monetary  `json:"major,omitempty"`
-	Minor Monetary  `json:"minor,omitempty"`
-	Price Monetary  `json:"price,omitempty"`
+	Book Book `json:"book"`
+
+	Side OrderSide `json:"side"`
+	Type OrderType `json:"type"`
+
+	Major Monetary `json:"major,omitempty"`
+	Minor Monetary `json:"minor,omitempty"`
+	Price Monetary `json:"price,omitempty"`
 }

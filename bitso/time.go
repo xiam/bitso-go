@@ -18,6 +18,7 @@ var timeFormats = []string{
 	iso8601TimeNano,
 }
 
+// UnmarshalJSON implements json.Unmarshal
 func (t *Time) UnmarshalJSON(in []byte) error {
 	var s string
 	if err := json.Unmarshal(in, &s); err != nil {
@@ -40,6 +41,7 @@ func (t *Time) UnmarshalJSON(in []byte) error {
 	return nil
 }
 
+// String implements fmt.Stringer
 func (t Time) String() string {
 	return time.Time(t).Format(iso8601Time)
 }

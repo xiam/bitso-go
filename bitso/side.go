@@ -5,8 +5,10 @@ import (
 	"errors"
 )
 
+// OrderSide tells whether an order is a buy or a sell.
 type OrderSide uint8
 
+// List of order sides.
 const (
 	OrderSideNone OrderSide = iota
 
@@ -19,10 +21,12 @@ var orderSides = map[OrderSide]string{
 	OrderSideSell: "sell",
 }
 
+// MarshalJSON implements json.Marshaler
 func (s OrderSide) MarshalJSON() ([]byte, error) {
 	return json.Marshal(s.String())
 }
 
+// UnmarshalJSON implements json.Unmarshaler
 func (s *OrderSide) UnmarshalJSON(in []byte) error {
 	var z string
 	if err := json.Unmarshal(in, &z); err != nil {

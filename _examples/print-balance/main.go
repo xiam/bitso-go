@@ -2,11 +2,12 @@ package main
 
 import (
 	"fmt"
-	"github.com/mazingstudio/bitso-go/bitso"
 	"log"
 	"os"
 	"strings"
 	"text/tabwriter"
+
+	"github.com/mazingstudio/bitso-go/bitso"
 )
 
 var client = bitso.NewClient(nil)
@@ -23,14 +24,14 @@ func init() {
 }
 
 func printBalance() {
-	balance, err := client.Balance(nil)
+	balances, err := client.Balance(nil)
 	if err != nil {
 		log.Fatalf("Balance: %v", err)
 		return
 	}
 	w := newTabWriter()
 	fmt.Fprintf(w, "CURRENCY\tTOTAL\tLOCKED\tAVAILABLE\n")
-	for _, b := range balance.Payload.Balances {
+	for _, b := range balances {
 		fmt.Fprintf(w, "%s\t%s\t%s\t%s\n",
 			strings.ToUpper(b.Currency.String()),
 			b.Total,

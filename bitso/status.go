@@ -5,25 +5,29 @@ import (
 	"fmt"
 )
 
-type Status uint8
+// OrderStatus represents the status of open orders.
+type OrderStatus uint8
 
+// List of order statuses.
 const (
-	StatusNone Status = iota
+	OrderStatusNone OrderStatus = iota
 
-	StatusOpen
-	StatusPartialFill
+	OrderStatusOpen
+	OrderStatusPartialFill
 )
 
-var statusNames = map[Status]string{
-	StatusOpen:        "open",
-	StatusPartialFill: "partial-fill",
+var statusNames = map[OrderStatus]string{
+	OrderStatusOpen:        "open",
+	OrderStatusPartialFill: "partial-fill",
 }
 
-func (s Status) MarshalJSON() ([]byte, error) {
+// MarshalJSON implements json.Marshaler
+func (s OrderStatus) MarshalJSON() ([]byte, error) {
 	return json.Marshal(s.String())
 }
 
-func (s *Status) UnmarshalJSON(in []byte) error {
+// UnmarshalJSON implements json.Unmarshaler
+func (s *OrderStatus) UnmarshalJSON(in []byte) error {
 	var z string
 	if err := json.Unmarshal(in, &z); err != nil {
 		return err
@@ -37,7 +41,7 @@ func (s *Status) UnmarshalJSON(in []byte) error {
 	return fmt.Errorf("unsupported status: %v", z)
 }
 
-func (s *Status) String() string {
+func (s *OrderStatus) String() string {
 	if z, ok := statusNames[*s]; ok {
 		return z
 	}

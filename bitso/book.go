@@ -5,19 +5,23 @@ import (
 	"strings"
 )
 
+// Book represents an exchange book.
 type Book struct {
 	major Currency
 	minor Currency
 }
 
+// NewBook returns a new exchange book from the given currencies.
 func NewBook(major Currency, minor Currency) *Book {
 	return &Book{major: major, minor: minor}
 }
 
+// Major returns the major currency in the book.
 func (b Book) Major() Currency {
 	return b.major
 }
 
+// Minor returns the minor currency in the book.
 func (b Book) Minor() Currency {
 	return b.minor
 }
@@ -32,10 +36,12 @@ func (b Book) String() string {
 	return currencyNames[b.major] + "_" + currencyNames[b.minor]
 }
 
+// MarshalJSON implements json.Marshaler.
 func (b Book) MarshalJSON() ([]byte, error) {
 	return json.Marshal(b.String())
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
 func (b *Book) UnmarshalJSON(in []byte) error {
 	var s string
 	if err := json.Unmarshal(in, &s); err != nil {
