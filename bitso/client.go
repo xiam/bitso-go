@@ -5,6 +5,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -54,6 +55,8 @@ func NewClient(httpClient *http.Client) *Client {
 type Client struct {
 	client *http.Client
 
+	apiPrefix string
+
 	key     string
 	secret  string
 	version string
@@ -63,18 +66,34 @@ type Client struct {
 	burstRate time.Duration
 }
 
-// SetKey sets the user key to use for private API calls.
-func (c *Client) SetKey(key string) {
+// SetAPIKey sets the user key to use for private API calls.
+func (c *Client) SetAPIKey(key string) {
 	c.key = key
 }
 
-// SetSecret sets the user secret to use for private API calls.
-func (c *Client) SetSecret(secret string) {
+// SetAPISecret sets the user secret to use for private API calls.
+func (c *Client) SetAPISecret(secret string) {
 	c.secret = secret
 }
 
 func (c *Client) endpointURL(endpoint string) (*url.URL, error) {
-	return url.Parse(apiPrefix + c.version + endpoint)
+	return url.Parse(c.APIPrefix() + c.version + endpoint)
+}
+
+// SetAPIPrefix sets the API prefix
+func (c *Client) SetAPIPrefix(prefix string) {
+	if prefix != "" {
+		prefix = strings.TrimRight(prefix, "/") + "/"
+	}
+	c.apiPrefix = prefix
+}
+
+// APIPrefix returns the API prefix
+func (c *Client) APIPrefix() string {
+	if c.apiPrefix != "" {
+		return c.apiPrefix
+	}
+	return apiPrefix
 }
 
 func (c *Client) debugf(f string, a ...interface{}) {
@@ -214,8 +233,22 @@ func (c *Client) AvailableBooks() ([]ExchangeOrderBook, error) {
 	return res.Payload, nil
 }
 
+// Tickers returns trading information from all books.
+func (c *Client) Tickers() ([]Ticker, error) {
+	res := struct {
+		Payload []Ticker `json:"payload"`
+	}{}
+	if err := c.getResponse("/ticker", nil, &res); err != nil {
+		return nil, err
+	}
+	return res.Payload, nil
+}
+
 // Ticker returns trading information from the specified book.
-func (c *Client) Ticker(params url.Values) (*Ticker, error) {
+func (c *Client) Ticker(book *Book) (*Ticker, error) {
+	params := url.Values{
+		"book": {book.String()},
+	}
 	res := struct {
 		Payload Ticker `json:"payload"`
 	}{}
@@ -247,9 +280,9 @@ func (c *Client) OrderBook(params url.Values) (*OrderBook, error) {
 	return &res.Payload, nil
 }
 
-// Balance returns information concerning the user’s balances for all supported
+// Balances returns information concerning the user’s balances for all supported
 // currencies.
-func (c *Client) Balance(params url.Values) ([]Balance, error) {
+func (c *Client) Balances(params url.Values) ([]Balance, error) {
 	res := struct {
 		Payload struct {
 			Balances []Balance `json:"balances"`
@@ -312,8 +345,8 @@ func (c *Client) Fundings(params url.Values) ([]Funding, error) {
 	return res.Payload, nil
 }
 
-// UserTrades returns a list of the user's trades.
-func (c *Client) UserTrades(params url.Values) ([]UserTrade, error) {
+// MyTrades returns a list of the user's trades.
+func (c *Client) MyTrades(params url.Values) ([]UserTrade, error) {
 	res := struct {
 		Payload []UserTrade `json:"payload"`
 	}{}
@@ -323,8 +356,8 @@ func (c *Client) UserTrades(params url.Values) ([]UserTrade, error) {
 	return res.Payload, nil
 }
 
-// UserOrderTrades returns a list of the user's order trades.
-func (c *Client) UserOrderTrades(oid string, params url.Values) ([]UserOrderTrade, error) {
+// OrderTrades returns a list of the user's order trades on a given order.
+func (c *Client) OrderTrades(oid string, params url.Values) ([]UserOrderTrade, error) {
 	res := struct {
 		Payload []UserOrderTrade `json:"payload"`
 	}{}
@@ -334,8 +367,8 @@ func (c *Client) UserOrderTrades(oid string, params url.Values) ([]UserOrderTrad
 	return res.Payload, nil
 }
 
-// OpenOrders a list of the user's open orders.
-func (c *Client) OpenOrders(params url.Values) ([]UserOrder, error) {
+// MyOpenOrders a list of the user's open orders.
+func (c *Client) MyOpenOrders(params url.Values) ([]UserOrder, error) {
 	res := struct {
 		Payload []UserOrder `json:"payload"`
 	}{}
@@ -345,12 +378,24 @@ func (c *Client) OpenOrders(params url.Values) ([]UserOrder, error) {
 	return res.Payload, nil
 }
 
+// LookupOrder returns details of an order given its order ID.
+func (c *Client) LookupOrder(oid string) (*UserOrder, error) {
+	orders, err := c.LookupOrders([]string{oid})
+	if err != nil {
+		return nil, err
+	}
+	if len(orders) > 0 {
+		return &orders[0], nil
+	}
+	return nil, errors.New("no such order")
+}
+
 // LookupOrders returns a list of details for 1 or more orders
 func (c *Client) LookupOrders(oids []string) ([]UserOrder, error) {
 	res := struct {
 		Payload []UserOrder `json:"payload"`
 	}{}
-	if err := c.getResponse("/lookup_orders/"+strings.Join(oids, "-"), nil, &res); err != nil {
+	if err := c.getResponse("/orders/"+strings.Join(oids, "-"), nil, &res); err != nil {
 		return nil, err
 	}
 	return res.Payload, nil

@@ -19,16 +19,16 @@ func newTabWriter() *tabwriter.Writer {
 func init() {
 	key, secret := os.Getenv("API_KEY"), os.Getenv("API_SECRET")
 
-	client.SetKey(key)
-	client.SetSecret(secret)
+	client.SetAPIKey(key)
+	client.SetAPISecret(secret)
 }
 
 func printBalance() {
-	balances, err := client.Balance(nil)
+	balances, err := client.Balances(nil)
 	if err != nil {
-		log.Fatalf("Balance: %v", err)
-		return
+		log.Fatal("client.Balances: ", err)
 	}
+
 	w := newTabWriter()
 	fmt.Fprintf(w, "CURRENCY\tTOTAL\tLOCKED\tAVAILABLE\n")
 	for _, b := range balances {
@@ -39,6 +39,7 @@ func printBalance() {
 			b.Available,
 		)
 	}
+
 	w.Flush()
 }
 

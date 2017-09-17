@@ -7,12 +7,9 @@ type Fee struct {
 	FeePercent Monetary `json:"fee_percent"`
 }
 
-// WithdrawalFees represents a map of fees charged by withdrawals.
-type WithdrawalFees map[Currency]Monetary
-
 // CustomerFees represents a list of fees that Bitso
 // charges the user.
 type CustomerFees struct {
-	Fees           []Fee          `json:"fees"`
-	WithdrawalFees WithdrawalFees `json:"withdrawal_fees"`
+	Fees           []Fee               `json:"fees"`
+	WithdrawalFees map[string]Monetary `json:"withdrawal_fees"`
 }

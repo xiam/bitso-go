@@ -17,7 +17,7 @@ type Order struct {
 	// Major amount in order
 	Amount Monetary `json:"amount"`
 	// Order ID	(only for unaggregated order)
-	Oid string `json:"oid"`
+	OID string `json:"oid"`
 }
 
 // UserOrder represents an order from the current user.

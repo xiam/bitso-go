@@ -8,14 +8,12 @@ import (
 // Time represents a ISO8601 encoded time value.
 type Time time.Time
 
-const (
-	iso8601Time     = "2006-01-02T15:04:05-0700"
-	iso8601TimeNano = "2006-01-02T15:04:05.000-07:00"
-)
+const iso8601Time = "2006-01-02T15:04:05-0700"
 
 var timeFormats = []string{
 	iso8601Time,
-	iso8601TimeNano,
+	"2006-01-02T15:04:05-07:00",
+	"2006-01-02T15:04:05.000-07:00",
 }
 
 // UnmarshalJSON implements json.Unmarshal

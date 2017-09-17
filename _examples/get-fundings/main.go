@@ -10,13 +10,15 @@ import (
 func main() {
 	client := bitso.NewClient(nil)
 
-	client.SetKey(os.Getenv("API_KEY"))
-	client.SetSecret(os.Getenv("API_SECRET"))
+	client.SetAPIKey(os.Getenv("API_KEY"))
+	client.SetAPISecret(os.Getenv("API_SECRET"))
 
 	fundings, err := client.Fundings(nil)
 	if err != nil {
-		log.Fatalf("ERR: %#v", err)
+		log.Fatal("client.Fundings: ", err)
 	}
 
-	log.Printf("OK: %#v", fundings)
+	for _, funding := range fundings {
+		log.Print(funding)
+	}
 }

@@ -7,7 +7,7 @@ type Trade struct {
 	Amount    Monetary  `json:"amount"`
 	MakerSide OrderSide `json:"maker_side"`
 	Price     Monetary  `json:"price"`
-	TID       uint64    `json:"tid"`
+	TID       TID       `json:"tid"`
 }
 
 // UserTrade represents a trade made by the user
@@ -19,7 +19,7 @@ type UserTrade struct {
 	FeesAmount   Monetary  `json:"fees_amount"`
 	FeesCurrency Currency  `json:"currency"`
 	Price        Monetary  `json:"price"`
-	TID          uint64    `json:"tid"`
+	TID          TID       `json:"tid"`
 	OID          string    `json:"oid"`
 	Side         OrderSide `json:"side"`
 }
@@ -33,7 +33,7 @@ type UserOrderTrade struct {
 	FeesAmount   Monetary  `json:"fees_amount"`
 	FeesCurrency Currency  `json:"currency"`
 	Price        Monetary  `json:"price"`
-	TID          uint64    `json:"tid"`
+	TID          TID       `json:"tid"`
 	OID          string    `json:"oid"`
 	Side         OrderSide `json:"side"`
 }
