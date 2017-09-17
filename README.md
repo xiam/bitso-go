@@ -13,6 +13,7 @@ go get -u github.com/mazingstudio/bitso-go/bitso
 provides a websocket interface for the
 [Websocket](https://bitso.com/api_info?l=es#websocket-api) API.
 
+
 ## Get API key and secret
 
 You can get you API keys and secrets from here: https://bitso.com/api_setup
