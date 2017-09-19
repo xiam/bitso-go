@@ -1,5 +1,7 @@
 # bitso-go
 
+![gopher](https://user-images.githubusercontent.com/385670/30595681-799505a8-9d17-11e7-99a6-3a6375bc05a4.png)
+
 `bitso-go` is a Go wrapper around the [Bitso API](https://bitso.com/api_info)
 for the Bitso Bitcoin Exchange.
 
