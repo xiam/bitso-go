@@ -35,3 +35,10 @@ func (t *TID) UnmarshalJSON(in []byte) error {
 	*t = TID(v)
 	return nil
 }
+
+func (t *TID) Uint64() uint64 {
+	if t == nil {
+		return 0
+	}
+	return uint64(*t)
+}
