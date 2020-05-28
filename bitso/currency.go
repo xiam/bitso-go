@@ -2,7 +2,6 @@ package bitso
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 )
 
@@ -13,21 +12,35 @@ type Currency uint8
 const (
 	CurrencyNone Currency = iota
 
-	XRP
+	ARS
+	BAT
 	BCH
 	BTC
+	DAI
 	ETH
+	GNT
+	LTC
+	MANA
 	MXN
-	ETC
+	TUSD
+	USD
+	XRP
 )
 
 var currencyNames = map[Currency]string{
-	XRP: "xrp",
-	ETH: "eth",
-	MXN: "mxn",
-	BTC: "btc",
-	BCH: "bch",
-	ETC: "etc",
+	ARS:  "ars",
+	BAT:  "bat",
+	BCH:  "bch",
+	BTC:  "btc",
+	DAI:  "dai",
+	ETH:  "eth",
+	GNT:  "gnt",
+	LTC:  "ltc",
+	MANA: "mana",
+	MXN:  "mxn",
+	TUSD: "tusd",
+	USD:  "usd",
+	XRP:  "xrp",
 }
 
 func getCurrencyByName(name string) (*Currency, error) {
@@ -36,7 +49,7 @@ func getCurrencyByName(name string) (*Currency, error) {
 			return &c, nil
 		}
 	}
-	return nil, errors.New("no such currency")
+	return nil, fmt.Errorf("no such currency: %q", name)
 }
 
 // MarshalJSON implements json.Marshaler

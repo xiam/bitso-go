@@ -11,8 +11,8 @@ import (
 )
 
 var (
-	apiKey    = os.Getenv("API_KEY")
-	apiSecret = os.Getenv("API_SECRET")
+	apiKey    = os.Getenv("BITSO_API_KEY")
+	apiSecret = os.Getenv("BITSO_API_SECRET")
 )
 
 func testAvailableBooks(t *testing.T, c *bitso.Client) {
@@ -104,9 +104,6 @@ func testMyTrades(t *testing.T, c *bitso.Client) {
 }
 
 func testMyOpenOrders(t *testing.T, c *bitso.Client) {
-	_, err := c.MyOpenOrders(nil)
-	assert.Error(t, err)
-
 	orders, err := c.MyOpenOrders(url.Values{
 		"book": {bitso.NewBook(bitso.ETH, bitso.MXN).String()},
 	})

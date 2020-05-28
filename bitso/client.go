@@ -23,6 +23,7 @@ var (
 
 const (
 	apiPrefix      = "https://api.bitso.com/"
+	apiVersion     = "v3"
 	defaultTickets = 1
 )
 
@@ -42,7 +43,7 @@ func NewClient(httpClient *http.Client) *Client {
 		client:  httpClient,
 		tickets: make(chan struct{}, defaultTickets),
 
-		version:   "v3",
+		version:   apiVersion,
 		burstRate: defaultBurstRate,
 	}
 	for i := 0; i < defaultTickets; i++ {
