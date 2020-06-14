@@ -1,6 +1,7 @@
 package bitso
 
 import (
+	"database/sql/driver"
 	"encoding/json"
 	"errors"
 )
@@ -30,12 +31,7 @@ func (o Operation) MarshalJSON() ([]byte, error) {
 	return json.Marshal(o.String())
 }
 
-// UnmarshalJSON implements json.Unmarshaler
-func (o *Operation) UnmarshalJSON(in []byte) error {
-	var z string
-	if err := json.Unmarshal(in, &z); err != nil {
-		return err
-	}
+func (o *Operation) fromString(z string) error {
 	for k, v := range operationNames {
 		if v == z {
 			*o = k
@@ -45,11 +41,31 @@ func (o *Operation) UnmarshalJSON(in []byte) error {
 	return errors.New("unsupported operation")
 }
 
+// UnmarshalJSON implements json.Unmarshaler
+func (o *Operation) UnmarshalJSON(in []byte) error {
+	var z string
+	if err := json.Unmarshal(in, &z); err != nil {
+		return err
+	}
+	return o.fromString(z)
+}
+
 func (o Operation) String() string {
 	if z, ok := operationNames[o]; ok {
 		return z
 	}
 	panic("unsupported operation")
+}
+
+func (o Operation) Value() (driver.Value, error) {
+	return o.String(), nil
+}
+
+func (o *Operation) Scan(value interface{}) error {
+	if value == nil {
+		return nil
+	}
+	return o.fromString(value.(string))
 }
 
 // Transaction represents a transaction on the ledger.

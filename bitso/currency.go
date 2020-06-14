@@ -1,6 +1,7 @@
 package bitso
 
 import (
+	"database/sql/driver"
 	"encoding/json"
 	"fmt"
 )
@@ -57,12 +58,7 @@ func (c Currency) MarshalJSON() ([]byte, error) {
 	return json.Marshal(c.String())
 }
 
-// UnmarshalJSON implements json.Unmarshaler
-func (c *Currency) UnmarshalJSON(in []byte) error {
-	var z string
-	if err := json.Unmarshal(in, &z); err != nil {
-		return err
-	}
+func (c *Currency) fromString(z string) error {
 	for k, v := range currencyNames {
 		if v == z {
 			*c = k
@@ -72,9 +68,26 @@ func (c *Currency) UnmarshalJSON(in []byte) error {
 	return fmt.Errorf("unsupported currency: %v", z)
 }
 
+// UnmarshalJSON implements json.Unmarshaler
+func (c *Currency) UnmarshalJSON(in []byte) error {
+	var z string
+	if err := json.Unmarshal(in, &z); err != nil {
+		return err
+	}
+	return c.fromString(z)
+}
+
 func (c Currency) String() string {
 	if z, ok := currencyNames[c]; ok {
 		return z
 	}
-	panic("unsupported currency")
+	panic(fmt.Sprintf("unsupported currency: %q", string(c)))
+}
+
+func (c Currency) Value() (driver.Value, error) {
+	return c.String(), nil
+}
+
+func (c *Currency) Scan(value interface{}) error {
+	return c.fromString(value.(string))
 }

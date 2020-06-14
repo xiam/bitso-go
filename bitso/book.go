@@ -1,6 +1,7 @@
 package bitso
 
 import (
+	"database/sql/driver"
 	"encoding/json"
 	"strings"
 )
@@ -41,12 +42,7 @@ func (b Book) MarshalJSON() ([]byte, error) {
 	return json.Marshal(b.String())
 }
 
-// UnmarshalJSON implements json.Unmarshaler.
-func (b *Book) UnmarshalJSON(in []byte) error {
-	var s string
-	if err := json.Unmarshal(in, &s); err != nil {
-		return err
-	}
+func (b *Book) fromString(s string) error {
 	z := strings.Split(s, "_")
 
 	major, err := getCurrencyByName(z[0])
@@ -62,4 +58,25 @@ func (b *Book) UnmarshalJSON(in []byte) error {
 	b.minor = *minor
 
 	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (b *Book) UnmarshalJSON(in []byte) error {
+	var s string
+	if err := json.Unmarshal(in, &s); err != nil {
+		return err
+	}
+
+	return b.fromString(s)
+}
+
+func (b Book) Value() (driver.Value, error) {
+	return b.String(), nil
+}
+
+func (b *Book) Scan(value interface{}) error {
+	if value == nil {
+		return nil
+	}
+	return b.fromString(value.(string))
 }

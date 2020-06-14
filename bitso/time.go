@@ -16,6 +16,10 @@ var timeFormats = []string{
 	"2006-01-02T15:04:05.000-07:00",
 }
 
+func (t *Time) Time() time.Time {
+	return time.Time(*t)
+}
+
 // UnmarshalJSON implements json.Unmarshal
 func (t *Time) UnmarshalJSON(in []byte) error {
 	var s string

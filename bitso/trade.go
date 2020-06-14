@@ -17,7 +17,7 @@ type UserTrade struct {
 	CreatedAt    Time      `json:"created_at"`
 	Minor        Monetary  `json:"minor"`
 	FeesAmount   Monetary  `json:"fees_amount"`
-	FeesCurrency Currency  `json:"currency"`
+	FeesCurrency Currency  `json:"fees_currency"`
 	Price        Monetary  `json:"price"`
 	TID          TID       `json:"tid"`
 	OID          string    `json:"oid"`
