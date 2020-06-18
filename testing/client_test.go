@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mazingstudio/bitso-go/bitso"
 	"github.com/stretchr/testify/assert"
+	"github.com/xiam/bitso-go/bitso"
 )
 
 var (

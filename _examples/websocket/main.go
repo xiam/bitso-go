@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 
-	"github.com/mazingstudio/bitso-go/bitso"
+	"github.com/xiam/bitso-go/bitso"
 )
 
 func main() {

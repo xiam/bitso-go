@@ -3,10 +3,10 @@
 ![gopher](https://user-images.githubusercontent.com/385670/30595681-799505a8-9d17-11e7-99a6-3a6375bc05a4.png)
 
 `bitso-go` is a Go wrapper around the [Bitso API](https://bitso.com/api_info)
-for the Bitso Bitcoin Exchange.
+for the Bitso Cryptocurrency Exchange.
 
 ```
-go get -u github.com/mazingstudio/bitso-go/bitso
+go get -u github.com/xiam/bitso-go/bitso
 ```
 
 `bitso-go` supports the
@@ -26,14 +26,14 @@ import (
 	"log"
 	"os"
 
-	"github.com/mazingstudio/bitso-go/bitso"
+	"github.com/xiam/bitso-go/bitso"
 )
 
 func main() {
 	client := bitso.NewClient(nil)
 
-	client.SetAPIKey(os.Getenv("API_KEY"))
-	client.SetAPISecret(os.Getenv("API_SECRET"))
+	client.SetAPIKey(os.Getenv("BITSO_API_KEY"))
+	client.SetAPISecret(os.Getenv("BITSO_API_SECRET"))
 
 	fundings, err := client.Fundings(nil)
 	if err != nil {
@@ -49,23 +49,23 @@ func main() {
 You can compile and run it with:
 
 ```
-API_KEY=foo API_SECRET=bar go run main.go
+BITSO_API_KEY=foo BITSO_API_SECRET=bar go run main.go
 ```
 
-If you don't have an API key and secret you can get them here:
+If you don't have an API key and secret you can generate them here:
 https://bitso.com/api_setup
 
 See also
-[print-balance](https://github.com/mazingstudio/bitso-go/blob/master/_examples/print-balance/main.go)
+[print-balance](https://github.com/xiam/bitso-go/blob/master/_examples/print-balance/main.go)
 and
-[websocket](https://github.com/mazingstudio/bitso-go/blob/master/_examples/websocket/main.go)
+[websocket](https://github.com/xiam/bitso-go/blob/master/_examples/websocket/main.go)
 examples.
 
 ## License
 
 MIT
 
-> Copyright 2017, Mazing Studio SA de CV
+> Copyright 2017-today, Mazing Studio SA de CV
 >
 > Permission is hereby granted, free of charge, to any person obtaining a copy of
 > this software and associated documentation files (the "Software"), to deal in

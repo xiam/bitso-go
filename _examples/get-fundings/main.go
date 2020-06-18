@@ -4,14 +4,14 @@ import (
 	"log"
 	"os"
 
-	"github.com/mazingstudio/bitso-go/bitso"
+	"github.com/xiam/bitso-go/bitso"
 )
 
 func main() {
 	client := bitso.NewClient(nil)
 
-	client.SetAPIKey(os.Getenv("API_KEY"))
-	client.SetAPISecret(os.Getenv("API_SECRET"))
+	client.SetAPIKey(os.Getenv("BITSO_API_KEY"))
+	client.SetAPISecret(os.Getenv("BITSO_API_SECRET"))
 
 	fundings, err := client.Fundings(nil)
 	if err != nil {

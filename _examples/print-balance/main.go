@@ -7,7 +7,7 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/mazingstudio/bitso-go/bitso"
+	"github.com/xiam/bitso-go/bitso"
 )
 
 var client = bitso.NewClient(nil)
@@ -17,7 +17,7 @@ func newTabWriter() *tabwriter.Writer {
 }
 
 func init() {
-	key, secret := os.Getenv("API_KEY"), os.Getenv("API_SECRET")
+	key, secret := os.Getenv("BITSO_API_KEY"), os.Getenv("BITSO_API_SECRET")
 
 	client.SetAPIKey(key)
 	client.SetAPISecret(secret)
