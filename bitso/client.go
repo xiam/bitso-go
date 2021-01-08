@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	debug = false
+	debug = true
 )
 
 const (
@@ -31,7 +31,8 @@ const (
 var DefaultClient = NewClient(http.DefaultClient)
 
 var (
-	defaultBurstRate = time.Duration(0)
+	// Rate limit is 60 requests per second by default
+	defaultBurstRate = time.Millisecond * 16
 )
 
 // NewClient creates and returns a new Bitso API client.

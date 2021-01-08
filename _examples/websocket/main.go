@@ -19,6 +19,6 @@ func main() {
 
 	for {
 		m := <-ws.Receive()
-		log.Print(m)
+		log.Printf("message: %#v\n\n", m)
 	}
 }
