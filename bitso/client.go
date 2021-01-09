@@ -31,8 +31,8 @@ const (
 var DefaultClient = NewClient(http.DefaultClient)
 
 var (
-	// Rate limit is 60 requests per second by default
-	defaultBurstRate = time.Millisecond * 16
+	// Burst rate is disabled by default
+	defaultBurstRate = time.Second * 0
 )
 
 // NewClient creates and returns a new Bitso API client.
