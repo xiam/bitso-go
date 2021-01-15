@@ -3,7 +3,7 @@ package bitso
 // Funding represents the fundings of the user
 type Funding struct {
 	FID       string                 `json:"fid"`
-	Currency  Monetary               `json:"currency"`
+	Currency  Currency               `json:"currency"`
 	Method    string                 `json:"method"`
 	Amount    Monetary               `json:"amount"`
 	Status    string                 `json:"status"`
