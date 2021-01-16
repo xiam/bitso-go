@@ -347,6 +347,17 @@ func (c *Client) Fundings(params url.Values) ([]Funding, error) {
 	return res.Payload, nil
 }
 
+// Withdrawals returns detailed info on user's withdrawals
+func (c *Client) Withdrawals(params url.Values) ([]Withdrawal, error) {
+	res := struct {
+		Payload []Withdrawal `json:"payload"`
+	}{}
+	if err := c.getResponse("/withdrawals", params, &res); err != nil {
+		return nil, err
+	}
+	return res.Payload, nil
+}
+
 // MyTrades returns a list of the user's trades.
 func (c *Client) MyTrades(params url.Values) ([]UserTrade, error) {
 	res := struct {
