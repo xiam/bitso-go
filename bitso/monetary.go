@@ -3,6 +3,8 @@ package bitso
 import (
 	"fmt"
 	"strconv"
+
+	"github.com/shopspring/decimal"
 )
 
 // Monetary represents a monetary value
@@ -12,6 +14,10 @@ type Monetary string
 func (m *Monetary) Float64() float64 {
 	v, _ := strconv.ParseFloat(string(*m), 64)
 	return v
+}
+
+func (m *Monetary) Decimal() (decimal.Decimal, error) {
+	return decimal.NewFromString(string(*m))
 }
 
 // ToMonetary converts a float64 value into Monetary
