@@ -26,6 +26,7 @@ const (
 	TUSD
 	USD
 	XRP
+	BRL
 )
 
 var currencyNames = map[Currency]string{
@@ -42,6 +43,7 @@ var currencyNames = map[Currency]string{
 	TUSD: "tusd",
 	USD:  "usd",
 	XRP:  "xrp",
+	BRL:  "brl",
 }
 
 func getCurrencyByName(name string) (*Currency, error) {
