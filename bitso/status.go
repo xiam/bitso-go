@@ -18,7 +18,7 @@ const (
 
 var statusNames = map[OrderStatus]string{
 	OrderStatusOpen:        "open",
-	OrderStatusPartialFill: "partial-fill",
+	OrderStatusPartialFill: "partially filled",
 }
 
 // MarshalJSON implements json.Marshaler
@@ -38,7 +38,7 @@ func (s *OrderStatus) UnmarshalJSON(in []byte) error {
 			return nil
 		}
 	}
-	return fmt.Errorf("unsupported status: %v", z)
+	return fmt.Errorf("unsupported status: %q", z)
 }
 
 func (s *OrderStatus) String() string {
