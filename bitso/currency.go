@@ -4,6 +4,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
+	"strings"
 )
 
 // Currency represents currencies
@@ -44,6 +45,14 @@ var currencyNames = map[Currency]string{
 	USD:  "usd",
 	XRP:  "xrp",
 	BRL:  "brl",
+}
+
+func CurrencyFromString(name string) (Currency, error) {
+	currency, err := getCurrencyByName(strings.TrimSpace(strings.ToLower(name)))
+	if err != nil {
+		return CurrencyNone, err
+	}
+	return *currency, nil
 }
 
 func getCurrencyByName(name string) (*Currency, error) {
