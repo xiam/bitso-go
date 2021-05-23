@@ -20,7 +20,6 @@ const (
 	BTC
 	DAI
 	ETH
-	GNT
 	LTC
 	MANA
 	MXN
@@ -37,7 +36,6 @@ var currencyNames = map[Currency]string{
 	BTC:  "btc",
 	DAI:  "dai",
 	ETH:  "eth",
-	GNT:  "gnt",
 	LTC:  "ltc",
 	MANA: "mana",
 	MXN:  "mxn",
