@@ -13,12 +13,14 @@ const (
 	OrderStatusNone OrderStatus = iota
 
 	OrderStatusOpen
+	OrderStatusQueued
 	OrderStatusPartialFill
 )
 
 var statusNames = map[OrderStatus]string{
 	OrderStatusOpen:        "open",
 	OrderStatusPartialFill: "partially filled",
+	OrderStatusQueued:      "queued",
 }
 
 // MarshalJSON implements json.Marshaler
