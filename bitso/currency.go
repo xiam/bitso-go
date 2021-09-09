@@ -17,6 +17,7 @@ const (
 	ARS
 	BAT
 	BCH
+	BRL
 	BTC
 	DAI
 	ETH
@@ -25,14 +26,15 @@ const (
 	MXN
 	TUSD
 	USD
+	USDT
 	XRP
-	BRL
 )
 
 var currencyNames = map[Currency]string{
 	ARS:  "ars",
 	BAT:  "bat",
 	BCH:  "bch",
+	BRL:  "brl",
 	BTC:  "btc",
 	DAI:  "dai",
 	ETH:  "eth",
@@ -41,8 +43,8 @@ var currencyNames = map[Currency]string{
 	MXN:  "mxn",
 	TUSD: "tusd",
 	USD:  "usd",
+	USDT: "usdt",
 	XRP:  "xrp",
-	BRL:  "brl",
 }
 
 func CurrencyFromString(name string) (Currency, error) {
