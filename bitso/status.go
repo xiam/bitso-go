@@ -1,8 +1,9 @@
 package bitso
 
 import (
+	"database/sql/driver"
 	"encoding/json"
-	"fmt"
+	"errors"
 )
 
 // OrderStatus represents the status of open orders.
@@ -34,13 +35,7 @@ func (s *OrderStatus) UnmarshalJSON(in []byte) error {
 	if err := json.Unmarshal(in, &z); err != nil {
 		return err
 	}
-	for k, v := range statusNames {
-		if z == v {
-			*s = k
-			return nil
-		}
-	}
-	return fmt.Errorf("unsupported status: %q", z)
+	return s.fromString(z)
 }
 
 func (s *OrderStatus) String() string {
@@ -48,4 +43,25 @@ func (s *OrderStatus) String() string {
 		return z
 	}
 	panic("unsupported status")
+}
+
+func (s OrderStatus) Value() (driver.Value, error) {
+	return s.String(), nil
+}
+
+func (s *OrderStatus) Scan(value interface{}) error {
+	if value == nil {
+		return nil
+	}
+	return s.fromString(value.(string))
+}
+
+func (s *OrderStatus) fromString(z string) error {
+	for status, name := range statusNames {
+		if z == name {
+			*s = status
+			return nil
+		}
+	}
+	return errors.New("unsupported status")
 }

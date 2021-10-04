@@ -27,16 +27,6 @@ func (s OrderSide) MarshalJSON() ([]byte, error) {
 	return json.Marshal(s.String())
 }
 
-func (s *OrderSide) fromString(z string) error {
-	for side, name := range orderSides {
-		if z == name {
-			*s = side
-			return nil
-		}
-	}
-	return errors.New("unsupported order side")
-}
-
 // UnmarshalJSON implements json.Unmarshaler
 func (s *OrderSide) UnmarshalJSON(in []byte) error {
 	var z string
@@ -62,4 +52,14 @@ func (s *OrderSide) Scan(value interface{}) error {
 		return nil
 	}
 	return s.fromString(value.(string))
+}
+
+func (s *OrderSide) fromString(z string) error {
+	for side, name := range orderSides {
+		if z == name {
+			*s = side
+			return nil
+		}
+	}
+	return errors.New("unsupported order side")
 }
