@@ -30,6 +30,7 @@ const (
 	XRP
 	COMP
 	LINK
+	UNI
 )
 
 var currencyNames = map[Currency]string{
@@ -49,6 +50,7 @@ var currencyNames = map[Currency]string{
 	XRP:  "xrp",
 	COMP: "comp",
 	LINK: "link",
+	UNI:  "uni",
 }
 
 func CurrencyFromString(name string) (Currency, error) {
