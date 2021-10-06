@@ -17,6 +17,7 @@ const (
 	OrderStatusQueued
 	OrderStatusPartialFill
 	OrderStatusCancelled
+	OrderStatusCompleted
 )
 
 var statusNames = map[OrderStatus]string{
@@ -24,6 +25,7 @@ var statusNames = map[OrderStatus]string{
 	OrderStatusQueued:      "queued",
 	OrderStatusPartialFill: "partially filled",
 	OrderStatusCancelled:   "cancelled",
+	OrderStatusCompleted:   "completed",
 }
 
 // MarshalJSON implements json.Marshaler
