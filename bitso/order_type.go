@@ -2,7 +2,7 @@ package bitso
 
 import (
 	"encoding/json"
-	"errors"
+	"fmt"
 )
 
 // OrderType tells whether the order is a market or limit order.
@@ -38,7 +38,7 @@ func (o *OrderType) UnmarshalJSON(in []byte) error {
 			return nil
 		}
 	}
-	return errors.New("unsupported order type")
+	return fmt.Errorf("unsupported order type %q", string(in))
 }
 
 func (o OrderType) String() string {

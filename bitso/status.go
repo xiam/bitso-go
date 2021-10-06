@@ -3,7 +3,7 @@ package bitso
 import (
 	"database/sql/driver"
 	"encoding/json"
-	"errors"
+	"fmt"
 )
 
 // OrderStatus represents the status of open orders.
@@ -16,12 +16,14 @@ const (
 	OrderStatusOpen
 	OrderStatusQueued
 	OrderStatusPartialFill
+	OrderStatusCancelled
 )
 
 var statusNames = map[OrderStatus]string{
 	OrderStatusOpen:        "open",
-	OrderStatusPartialFill: "partially filled",
 	OrderStatusQueued:      "queued",
+	OrderStatusPartialFill: "partially filled",
+	OrderStatusCancelled:   "cancelled",
 }
 
 // MarshalJSON implements json.Marshaler
@@ -63,5 +65,5 @@ func (s *OrderStatus) fromString(z string) error {
 			return nil
 		}
 	}
-	return errors.New("unsupported status")
+	return fmt.Errorf("unsupported status %q", z)
 }
