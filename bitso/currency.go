@@ -14,6 +14,7 @@ type Currency uint8
 const (
 	CurrencyNone Currency = iota
 
+	AAVE
 	ARS
 	BAT
 	BCH
@@ -34,6 +35,7 @@ const (
 )
 
 var currencyNames = map[Currency]string{
+	AAVE: "aave",
 	ARS:  "ars",
 	BAT:  "bat",
 	BCH:  "bch",
