@@ -3,114 +3,60 @@ package bitso
 import (
 	"database/sql/driver"
 	"encoding/json"
-	"fmt"
 	"strings"
 )
 
 // Currency represents currencies
-type Currency uint8
+type Currency string
 
 // Currencies
 const (
-	CurrencyNone Currency = iota
+	CurrencyNone Currency = ""
 
-	AAVE
-	ARS
-	AXS
-	BAT
-	BCH
-	BRL
-	BTC
-	CHZ
-	COMP
-	DAI
-	DYDX
-	ETH
-	LINK
-	LTC
-	MANA
-	MXN
-	TUSD
-	UNI
-	USD
-	USDT
-	XRP
-	SAND
-	YFI
+	AAVE = "aave"
+	ARS  = "ars"
+	AXS  = "axs"
+	BAT  = "bat"
+	BCH  = "bch"
+	BRL  = "brl"
+	BTC  = "btc"
+	CHZ  = "chz"
+	COMP = "comp"
+	DAI  = "dai"
+	DYDX = "dydx"
+	ETH  = "eth"
+	LINK = "link"
+	LTC  = "ltc"
+	MANA = "mana"
+	MXN  = "mxn"
+	SAND = "sand"
+	TUSD = "tusd"
+	UNI  = "uni"
+	USD  = "usd"
+	USDT = "usdt"
+	XRP  = "xrp"
+	YFI  = "yfi"
 )
 
-var currencyNames = map[Currency]string{
-	AAVE: "aave",
-	AXS:  "axs",
-	ARS:  "ars",
-	BAT:  "bat",
-	BCH:  "bch",
-	BRL:  "brl",
-	BTC:  "btc",
-	DAI:  "dai",
-	DYDX: "dydx",
-	ETH:  "eth",
-	LTC:  "ltc",
-	MANA: "mana",
-	MXN:  "mxn",
-	TUSD: "tusd",
-	USD:  "usd",
-	USDT: "usdt",
-	XRP:  "xrp",
-	COMP: "comp",
-	LINK: "link",
-	UNI:  "uni",
-	CHZ:  "chz",
-	SAND: "sand",
-	YFI:  "yfi",
+func ToCurrency(name string) Currency {
+	return Currency(strings.ToLower(name))
 }
 
-func CurrencyFromString(name string) (Currency, error) {
-	currency, err := getCurrencyByName(strings.TrimSpace(strings.ToLower(name)))
-	if err != nil {
-		return CurrencyNone, err
-	}
-	return *currency, nil
+func (c Currency) String() string {
+	return string(c)
 }
 
-func getCurrencyByName(name string) (*Currency, error) {
-	for c, n := range currencyNames {
-		if n == name {
-			return &c, nil
-		}
-	}
-	return nil, fmt.Errorf("no such currency: %q", name)
-}
-
-// MarshalJSON implements json.Marshaler
 func (c Currency) MarshalJSON() ([]byte, error) {
 	return json.Marshal(c.String())
 }
 
-func (c *Currency) fromString(z string) error {
-	for k, v := range currencyNames {
-		if v == z {
-			*c = k
-			return nil
-		}
-	}
-	return fmt.Errorf("unsupported currency: %v", z)
-}
-
-// UnmarshalJSON implements json.Unmarshaler
 func (c *Currency) UnmarshalJSON(in []byte) error {
 	var z string
 	if err := json.Unmarshal(in, &z); err != nil {
 		return err
 	}
-	return c.fromString(z)
-}
-
-func (c Currency) String() string {
-	if z, ok := currencyNames[c]; ok {
-		return z
-	}
-	panic(fmt.Sprintf("unsupported currency: %q", string(c)))
+	*c = ToCurrency(z)
+	return nil
 }
 
 func (c Currency) Value() (driver.Value, error) {
@@ -118,5 +64,6 @@ func (c Currency) Value() (driver.Value, error) {
 }
 
 func (c *Currency) Scan(value interface{}) error {
-	return c.fromString(value.(string))
+	*c = ToCurrency(value.(string))
+	return nil
 }

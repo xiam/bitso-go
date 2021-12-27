@@ -3,6 +3,8 @@ package bitso
 import (
 	"database/sql/driver"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"strings"
 )
 
@@ -28,13 +30,7 @@ func (b Book) Minor() Currency {
 }
 
 func (b Book) String() string {
-	if currencyNames[b.major] == "" {
-		panic("missing major")
-	}
-	if currencyNames[b.minor] == "" {
-		panic("missing minor")
-	}
-	return currencyNames[b.major] + "_" + currencyNames[b.minor]
+	return fmt.Sprintf("%s_%s", b.major, b.minor)
 }
 
 // MarshalJSON implements json.Marshaler.
@@ -44,18 +40,12 @@ func (b Book) MarshalJSON() ([]byte, error) {
 
 func (b *Book) fromString(s string) error {
 	z := strings.Split(s, "_")
-
-	major, err := getCurrencyByName(z[0])
-	if err != nil {
-		return err
+	if len(z) != 2 {
+		return errors.New("unexpected book format")
 	}
-	b.major = *major
 
-	minor, err := getCurrencyByName(z[1])
-	if err != nil {
-		return err
-	}
-	b.minor = *minor
+	b.major = ToCurrency(z[0])
+	b.minor = ToCurrency(z[1])
 
 	return nil
 }
