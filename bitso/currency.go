@@ -16,33 +16,39 @@ const (
 
 	AAVE
 	ARS
+	AXS
 	BAT
 	BCH
 	BRL
 	BTC
+	CHZ
+	COMP
 	DAI
+	DYDX
 	ETH
+	LINK
 	LTC
 	MANA
 	MXN
 	TUSD
+	UNI
 	USD
 	USDT
 	XRP
-	COMP
-	LINK
-	UNI
-	CHZ
+	SAND
+	YFI
 )
 
 var currencyNames = map[Currency]string{
 	AAVE: "aave",
+	AXS:  "axs",
 	ARS:  "ars",
 	BAT:  "bat",
 	BCH:  "bch",
 	BRL:  "brl",
 	BTC:  "btc",
 	DAI:  "dai",
+	DYDX: "dydx",
 	ETH:  "eth",
 	LTC:  "ltc",
 	MANA: "mana",
@@ -55,6 +61,8 @@ var currencyNames = map[Currency]string{
 	LINK: "link",
 	UNI:  "uni",
 	CHZ:  "chz",
+	SAND: "sand",
+	YFI:  "yfi",
 }
 
 func CurrencyFromString(name string) (Currency, error) {
