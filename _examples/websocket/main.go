@@ -7,9 +7,9 @@ import (
 )
 
 func main() {
-	ws, err := bitso.NewWebsocket()
+	ws, err := bitso.NewWebSocketConn()
 	if err != nil {
-		log.Fatal("bitso.NewWebsocket: ", err)
+		log.Fatal("bitso.NewWebSocketConn: ", err)
 	}
 
 	err = ws.Subscribe(bitso.NewBook(bitso.ETH, bitso.MXN), "orders")

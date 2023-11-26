@@ -10,7 +10,7 @@ import (
 	"github.com/xiam/bitso-go/bitso"
 )
 
-var client = bitso.NewClient(nil)
+var client = bitso.NewClient()
 
 func newTabWriter() *tabwriter.Writer {
 	return tabwriter.NewWriter(os.Stdout, 4, 4, 3, ' ', 0)
@@ -18,9 +18,11 @@ func newTabWriter() *tabwriter.Writer {
 
 func init() {
 	key, secret := os.Getenv("BITSO_API_KEY"), os.Getenv("BITSO_API_SECRET")
+	if key == "" || secret == "" {
+		log.Fatal("Please set BITSO_API_KEY and BITSO_API_SECRET")
+	}
 
-	client.SetAPIKey(key)
-	client.SetAPISecret(secret)
+	client.SetAuth(key, secret)
 }
 
 func printBalance() {
