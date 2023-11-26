@@ -9,8 +9,8 @@ import (
 
 const wssURL = `wss://ws.bitso.com`
 
-// WebsocketReply represents a generic reply from a channel.
-type WebsocketReply struct {
+// WebSocketReply represents a generic reply from a channel.
+type WebSocketReply struct {
 	Action   string      `json:"action"`
 	Response string      `json:"response"`
 	Time     uint64      `json:"time"`
@@ -18,63 +18,71 @@ type WebsocketReply struct {
 	Payload  interface{} `json:"payload,omitempty"`
 }
 
-// WebsocketTrade represents a message from the "trades" channel.
-type WebsocketTrade struct {
+// WebSocketTrade represents a message from the "trades" channel.
+type WebSocketTrade struct {
 	Book    Book
 	Payload []struct {
-		TID          uint64   `json:"i"`
-		Amount       Monetary `json:"a"`
-		Price        Monetary `json:"r"`
-		Value        Monetary `json:"v"`
-		MakerOrderID string   `json:"mo"`
-		TakerOrderID string   `json:"to"`
+		TID               uint64   `json:"i"`
+		Amount            Monetary `json:"a"`
+		Price             Monetary `json:"r"`
+		Value             Monetary `json:"v"`
+		MakerSide         string   `json:"t"`
+		CreationTimestamp uint64   `json:"x"`
+		MakerOrderID      string   `json:"mo"`
+		TakerOrderID      string   `json:"to"`
 	}
 }
 
-// WebsocketDiffOrder represents a message from the "diff-orders" channel.
-type WebsocketDiffOrder struct {
+// WebSocketDiffOrder represents a message from the "diff-orders" channel.
+type WebSocketDiffOrder struct {
 	Book    Book
 	Payload []struct {
-		Timestamp uint64   `json:"d"`
-		Price     Monetary `json:"r"`
-		Position  int      `json:"t"`
-		Amount    Monetary `json:"a"`
-		Value     Monetary `json:"v"`
-		OrderID   string   `json:"o"`
+		Timestamp           uint64   `json:"d"`
+		Price               Monetary `json:"r"`
+		Status              string   `json:"s"`
+		Position            int      `json:"t"`
+		Amount              Monetary `json:"a"`
+		Value               Monetary `json:"v"`
+		LastUpdateTimestamp uint64   `json:"z"`
+		OrderID             string   `json:"o"`
 	}
 }
 
-// WebsocketOrder represents a message from the "diff-orders" channel.
-type WebsocketOrder struct {
+// WebSocketOrder represents a message from the "diff-orders" channel.
+type WebSocketOrder struct {
 	Book    Book
 	Payload struct {
 		Bids []struct {
-			Price     float64 `json:"r"`
-			Amount    float64 `json:"a"`
-			Position  int     `json:"t"`
-			Value     float64 `json:"v"`
-			Timestamp uint64  `json:"d"`
+			Amount    Monetary `json:"a"`
+			OrderID   string   `json:"o"`
+			Position  int      `json:"t"`
+			Price     Monetary `json:"r"`
+			Status    string   `json:"s"`
+			Timestamp uint64   `json:"d"`
+			Value     Monetary `json:"v"`
 		} `json:"bids"`
 		Asks []struct {
-			Price     float64 `json:"r"`
-			Amount    float64 `json:"a"`
-			Position  int     `json:"t"`
-			Value     float64 `json:"v"`
-			Timestamp uint64  `json:"d"`
+			Amount    Monetary `json:"a"`
+			OrderID   string   `json:"o"`
+			Position  int      `json:"t"`
+			Price     Monetary `json:"r"`
+			Status    string   `json:"s"`
+			Timestamp uint64   `json:"d"`
+			Value     Monetary `json:"v"`
 		} `json:"asks"`
 	} `json:"payload"`
 }
 
-// WebsocketMessage represents a message that can be sent to channel.
-type WebsocketMessage struct {
+// WebSocketMessage represents a message that can be sent to channel.
+type WebSocketMessage struct {
 	Action string `json:"action"`
 	Book   *Book  `json:"book"`
 	Type   string `json:"type"`
 }
 
-// A Websocket establishes a connection with Bitso's websocket service to send
-// and receive messages over the ws protocol.
-type Websocket struct {
+// A WebSocketConn establishes a connection with Bitso's websocket service to
+// send and receive messages over the ws protocol.
+type WebSocketConn struct {
 	endpoint string
 	conn     *websocket.Conn
 
@@ -82,14 +90,14 @@ type Websocket struct {
 }
 
 // Receive returns a channel where received messages are sent.
-func (ws *Websocket) Receive() chan interface{} {
+func (ws *WebSocketConn) Receive() chan interface{} {
 	return ws.inbox
 }
 
-// NewWebsocket creates a websocket handler and establishes a connection with
+// WebSocketConn creates a websocket handler and establishes a connection with
 // Bitso's websocket servers.
-func NewWebsocket() (*Websocket, error) {
-	ws := &Websocket{
+func NewWebSocketConn() (*WebSocketConn, error) {
+	ws := &WebSocketConn{
 		endpoint: wssURL,
 		inbox:    make(chan interface{}, 8),
 	}
@@ -109,7 +117,7 @@ func NewWebsocket() (*Websocket, error) {
 				return
 			}
 
-			var reply WebsocketReply
+			var reply WebSocketReply
 			if err := json.Unmarshal(data, &reply); err != nil {
 				log.Printf("failed to unmarshal message: %v", err)
 				return
@@ -118,7 +126,7 @@ func NewWebsocket() (*Websocket, error) {
 			switch reply.Type {
 			case "diff-orders":
 				if reply.Payload != nil {
-					var diff WebsocketDiffOrder
+					var diff WebSocketDiffOrder
 					if err := json.Unmarshal(data, &diff); err != nil {
 						log.Printf("failed to unmarshal diff order: %v", err)
 						return
@@ -131,7 +139,7 @@ func NewWebsocket() (*Websocket, error) {
 				continue
 			case "orders":
 				if reply.Payload != nil {
-					var order WebsocketOrder
+					var order WebSocketOrder
 					if err := json.Unmarshal(data, &order); err != nil {
 						log.Printf("failed to unmarshal order: %v", err)
 						return
@@ -141,7 +149,7 @@ func NewWebsocket() (*Websocket, error) {
 				}
 			case "trades":
 				if reply.Payload != nil {
-					var trade WebsocketTrade
+					var trade WebSocketTrade
 					if err := json.Unmarshal(data, &trade); err != nil {
 						log.Printf("failed to unmarshal trade: %v", err)
 						return
@@ -159,7 +167,7 @@ func NewWebsocket() (*Websocket, error) {
 }
 
 // Close closes the active connection with Bitso's websocket servers.
-func (ws *Websocket) Close() error {
+func (ws *WebSocketConn) Close() error {
 	if ws.conn != nil {
 		return ws.conn.Close()
 	}
@@ -167,8 +175,8 @@ func (ws *Websocket) Close() error {
 }
 
 // Subscribe subscribes to a messages channel.
-func (ws *Websocket) Subscribe(book *Book, channelName string) error {
-	m := WebsocketMessage{
+func (ws *WebSocketConn) Subscribe(book *Book, channelName string) error {
+	m := WebSocketMessage{
 		Action: "subscribe",
 		Book:   book,
 		Type:   channelName,
