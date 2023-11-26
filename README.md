@@ -1,71 +1,39 @@
 # bitso-go
 
-![gopher](https://user-images.githubusercontent.com/385670/30595681-799505a8-9d17-11e7-99a6-3a6375bc05a4.png)
-
-`bitso-go` is a Go wrapper around the [Bitso API](https://bitso.com/api_info)
-for the Bitso Cryptocurrency Exchange.
+`bitso-go` is a Go wrapper around the [Bitso API][1] for the Bitso
+Cryptocurrency Exchange.
 
 ```
 go get -u github.com/xiam/bitso-go/bitso
 ```
-
-`bitso-go` supports the
-[public](https://bitso.com/api_info?l=es#public-rest-api) and
-[private](https://bitso.com/api_info?l=es#private-rest-api) REST APIs and also
-provides a websocket interface for the
-[Websocket](https://bitso.com/api_info?l=es#websocket-api) API.
 
 ## Examples
 
 The example below prints fundings in your account:
 
 ```go
-package main
+client := bitso.NewClient()
+client.SetLogLevel(bitso.LogLevelDebug)
 
-import (
-	"log"
-	"os"
+client.SetAuth(key, secret)
 
-	"github.com/xiam/bitso-go/bitso"
-)
+fundings, err := client.Fundings(nil)
+if err != nil {
+    log.Fatal("can not get fundings: ", err)
+}
 
-func main() {
-	client := bitso.NewClient(nil)
-
-	client.SetAPIKey(os.Getenv("BITSO_API_KEY"))
-	client.SetAPISecret(os.Getenv("BITSO_API_SECRET"))
-
-	fundings, err := client.Fundings(nil)
-	if err != nil {
-		log.Fatal("client.Fundings: ", err)
-	}
-
-	for _, funding := range fundings {
-		log.Print(funding)
-	}
+for _, funding := range fundings {
+    log.Printf("%#v", funding)
 }
 ```
 
-You can compile and run it with:
-
-```
-BITSO_API_KEY=foo BITSO_API_SECRET=bar go run main.go
-```
-
-If you don't have an API key and secret you can generate them here:
-https://bitso.com/api_setup
-
-See also
-[print-balance](https://github.com/xiam/bitso-go/blob/master/_examples/print-balance/main.go)
-and
-[websocket](https://github.com/xiam/bitso-go/blob/master/_examples/websocket/main.go)
-examples.
+See a few more examples: https://github.com/xiam/bitso-go/tree/master/_examples
 
 ## License
 
 MIT
 
-> Copyright 2017-today, Mazing Studio SA de CV
+> Copyright 2017-today, José Nieto.
 >
 > Permission is hereby granted, free of charge, to any person obtaining a copy of
 > this software and associated documentation files (the "Software"), to deal in
@@ -84,3 +52,5 @@ MIT
 > LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 > OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 > SOFTWARE.
+
+[1]: https://docs.bitso.com/bitso-api/docs
