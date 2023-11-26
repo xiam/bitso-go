@@ -9,105 +9,99 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"time"
-)
 
-var (
-	debug = false
+	"github.com/rs/zerolog"
 )
 
 const (
-	apiPrefix      = "https://api.bitso.com/"
-	apiVersion     = "v3"
-	defaultTickets = 1
+	apiBaseURL = "https://bitso.com/api"
+	apiVersion = "v3"
 )
 
-// DefaultClient is the default Bitso API client to use.
-var DefaultClient = NewClient(http.DefaultClient)
+const (
+	LogLevelPanic = zerolog.PanicLevel
+	LogLevelFatal = zerolog.FatalLevel
+	LogLevelError = zerolog.ErrorLevel
+	LogLevelWarn  = zerolog.WarnLevel
+	LogLevelInfo  = zerolog.InfoLevel
+	LogLevelDebug = zerolog.DebugLevel
+	LogLevelTrace = zerolog.TraceLevel
+)
+
+const defaultTickets = 1
 
 var (
 	// Burst rate is disabled by default
 	defaultBurstRate = time.Second * 0
 )
 
-// NewClient creates and returns a new Bitso API client.
-func NewClient(httpClient *http.Client) *Client {
-	if httpClient == nil {
-		httpClient = http.DefaultClient
-	}
-	c := &Client{
-		client:  httpClient,
-		tickets: make(chan struct{}, defaultTickets),
-
-		version:   apiVersion,
-		burstRate: defaultBurstRate,
-	}
-	for i := 0; i < defaultTickets; i++ {
-		c.tickets <- struct{}{}
-	}
-	return c
-}
-
 // A Client is a Bitso API consumer
 type Client struct {
 	client *http.Client
+	logger zerolog.Logger
 
-	apiPrefix string
-
-	key     string
-	secret  string
+	baseURL string
 	version string
+
+	key    string
+	secret string
 
 	tickets chan struct{}
 
 	burstRate time.Duration
 }
 
-// SetAPIKey sets the user key to use for private API calls.
-func (c *Client) SetAPIKey(key string) {
-	c.key = key
-}
+// NewClient creates and returns a new Bitso API client.
+func NewClient() *Client {
+	c := &Client{
+		client:    http.DefaultClient,
+		tickets:   make(chan struct{}, defaultTickets),
+		baseURL:   strings.TrimPrefix(apiBaseURL, "/") + "/",
+		logger:    zerolog.New(os.Stderr).With().Timestamp().Logger(),
+		version:   apiVersion,
+		burstRate: defaultBurstRate,
+	}
 
-// SetAPISecret sets the user secret to use for private API calls.
-func (c *Client) SetAPISecret(secret string) {
-	c.secret = secret
+	c.SetLogLevel(LogLevelInfo)
+
+	for i := 0; i < defaultTickets; i++ {
+		c.tickets <- struct{}{}
+	}
+	return c
 }
 
 func (c *Client) endpointURL(endpoint string) (*url.URL, error) {
-	return url.Parse(c.APIPrefix() + c.version + endpoint)
+	return url.Parse(c.APIBaseURL() + c.version + endpoint)
 }
 
-// SetAPIPrefix sets the API prefix
-func (c *Client) SetAPIPrefix(prefix string) {
-	if prefix != "" {
-		prefix = strings.TrimRight(prefix, "/") + "/"
-	}
-	c.apiPrefix = prefix
+// SetLogLevel sets the log level for the client.
+func (c *Client) SetLogLevel(level zerolog.Level) {
+	c.logger = c.logger.Level(level)
 }
 
-// APIPrefix returns the API prefix
-func (c *Client) APIPrefix() string {
-	if c.apiPrefix != "" {
-		return c.apiPrefix
-	}
-	return apiPrefix
+// SetAuth sets the user key and secret to use for private API calls.
+func (c *Client) SetAuth(key, secret string) {
+	c.key = key
+	c.secret = secret
 }
 
-func (c *Client) debugf(f string, a ...interface{}) {
-	if !debug {
-		return
-	}
-	log.Printf(f, a...)
+// SetAPIBaseURL sets the API prefix
+func (c *Client) SetAPIBaseURL(prefix string) {
+	c.baseURL = strings.TrimRight(prefix, "/") + "/"
 }
 
-func (c *Client) newRequest(method string, uri string, body io.Reader) (*http.Request, error) {
-	nonce := time.Now().UnixNano()
+// APIBaseURL returns the API prefix
+func (c *Client) APIBaseURL() string {
+	return c.baseURL
+}
 
+func (c *Client) newRequest(logger *zerolog.Logger, method string, uri string, body io.Reader) (*http.Request, error) {
 	var buf []byte
 
 	if body != nil {
@@ -117,8 +111,6 @@ func (c *Client) newRequest(method string, uri string, body io.Reader) (*http.Re
 			return nil, err
 		}
 	}
-
-	c.debugf("req: %v", string(buf))
 
 	req, err := http.NewRequest(method, uri, bytes.NewBuffer(buf))
 	if err != nil {
@@ -140,27 +132,41 @@ func (c *Client) newRequest(method string, uri string, body io.Reader) (*http.Re
 		return nil, err
 	}
 
-	message := fmt.Sprintf("%d%s%s%s", nonce, method, u.RequestURI(), string(buf))
-	c.debugf("message: %v", message)
+	nonce := time.Now().UnixNano()
+	message := strconv.FormatInt(nonce, 10) + method + u.RequestURI() + string(buf)
 
 	mac := hmac.New(sha256.New, []byte(c.secret))
 	mac.Write([]byte(message))
+
 	signature := fmt.Sprintf("%x", mac.Sum(nil))
 
 	authHeader := fmt.Sprintf("Bitso %s:%d:%s", c.key, nonce, signature)
 	req.Header.Set("Authorization", authHeader)
 
-	return req, err
+	if logger.GetLevel() <= zerolog.TraceLevel {
+		*logger = logger.With().
+			Str("auth", authHeader).
+			Str("message", message).
+			Str("signature", signature).
+			Logger()
+	}
+
+	return req, nil
 }
 
 func (c *Client) doRequest(method string, endpoint string, params url.Values, body io.Reader, dest interface{}) error {
+	logger := c.logger.With().
+		Str("method", method).
+		Str("endpoint", endpoint).
+		Logger()
+
 	u, err := c.endpointURL(endpoint)
 	if err != nil {
 		return err
 	}
 	u.RawQuery = params.Encode()
 
-	req, err := c.newRequest(method, u.String(), body)
+	req, err := c.newRequest(&logger, method, u.String(), body)
 	if err != nil {
 		return err
 	}
@@ -177,30 +183,43 @@ func (c *Client) doRequest(method string, endpoint string, params url.Values, bo
 
 	res, err := c.client.Do(req)
 	if err != nil {
+		logger.Error().Err(err).Msg("request failed")
 		return err
 	}
 	defer res.Body.Close()
 
 	buf, err := ioutil.ReadAll(res.Body)
 	if err != nil {
+		logger.Error().Err(err).Msg("can not read response body")
 		return err
 	}
 
-	c.debugf("res: %#v", res)
-	c.debugf("res: %v", string(buf))
+	logger = logger.With().
+		Int("status", res.StatusCode).
+		Logger()
+
+	if logger.GetLevel() <= zerolog.DebugLevel {
+		logger = logger.With().
+			Str("body", string(buf)).
+			Logger()
+	}
 
 	var env Envelope
 	if err := json.Unmarshal(buf, &env); err != nil {
+		logger.Error().Msg("can not unmarshal envelope")
 		return err
 	}
-	c.debugf("env: %#v", env)
+
 	if !env.Success {
-		code := fmt.Sprintf("%v", env.Error.Code)
-		i, _ := strconv.Atoi(code)
-		return apiError(i, env.Error.Message)
+		code, _ := strconv.Atoi(fmt.Sprintf("%v", env.Error.Code))
+		logger.Error().
+			Int("error.code", code).
+			Msgf("api error: %s", env.Error.Message)
+		return apiError(code, env.Error.Message)
 	}
 
 	if err := json.Unmarshal(buf, dest); err != nil {
+		logger.Error().Msg("can not unmarshal payload")
 		return err
 	}
 
@@ -341,7 +360,7 @@ func (c *Client) Fundings(params url.Values) ([]Funding, error) {
 	res := struct {
 		Payload []Funding `json:"payload"`
 	}{}
-	if err := c.getResponse("/fundings", params, &res); err != nil {
+	if err := c.getResponse("/fundings/", params, &res); err != nil {
 		return nil, err
 	}
 	return res.Payload, nil
