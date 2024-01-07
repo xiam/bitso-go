@@ -1,5 +1,9 @@
 image: golang:latest
 
+default:
+  tags:
+    - docker
+
 test:
   script:
     - go test -race -v ./...
