@@ -175,6 +175,7 @@ func (c *Client) doRequest(method string, endpoint string, params url.Values, bo
 	if br := c.burstRate; br > 0 {
 		<-c.tickets
 		ticker := time.NewTicker(br)
+		defer ticker.Stop()
 		go func() {
 			<-ticker.C
 			c.tickets <- struct{}{}
