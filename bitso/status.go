@@ -42,11 +42,11 @@ func (s *OrderStatus) UnmarshalJSON(in []byte) error {
 	return s.fromString(z)
 }
 
-func (s *OrderStatus) String() string {
-	if z, ok := statusNames[*s]; ok {
+func (s OrderStatus) String() string {
+	if z, ok := statusNames[s]; ok {
 		return z
 	}
-	panic("unsupported status")
+	return fmt.Sprintf("OrderStatus(%d)", s)
 }
 
 func (s OrderStatus) Value() (driver.Value, error) {

@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -36,6 +35,9 @@ const (
 )
 
 const defaultTickets = 1
+
+// maxResponseSize limits the maximum response body size to prevent DoS attacks
+const maxResponseSize = 10 * 1024 * 1024 // 10MB
 
 var (
 	// Burst rate is disabled by default
@@ -356,7 +358,7 @@ func (c *Client) newRequest(logger *zerolog.Logger, method string, uri string, b
 
 	if body != nil {
 		var err error
-		buf, err = ioutil.ReadAll(body)
+		buf, err = io.ReadAll(body)
 		if err != nil {
 			return nil, err
 		}
@@ -441,7 +443,7 @@ func (c *Client) doRequest(method string, endpoint string, params url.Values, bo
 	}
 	defer res.Body.Close()
 
-	buf, err := ioutil.ReadAll(res.Body)
+	buf, err := io.ReadAll(io.LimitReader(res.Body, maxResponseSize))
 	if err != nil {
 		logger.Error().Err(err).Msg("can not read response body")
 		return err

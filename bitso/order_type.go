@@ -45,5 +45,5 @@ func (o OrderType) String() string {
 	if z, ok := orderTypes[o]; ok {
 		return z
 	}
-	panic("unsupported order type")
+	return fmt.Sprintf("OrderType(%d)", o)
 }

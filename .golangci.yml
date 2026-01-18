@@ -1,0 +1,15 @@
+linters:
+  enable:
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+
+issues:
+  exclude-rules:
+    # Ignore errcheck in test files - test failures will surface write errors
+    - path: _test\.go
+      linters:
+        - errcheck

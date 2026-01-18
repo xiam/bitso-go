@@ -26,6 +26,12 @@ type Ticker struct {
 	// Highest buy order
 	Bid Monetary `json:"bid"`
 
+	// Price change in the last 24 hours
+	Change24 Monetary `json:"change_24"`
+
+	// Rolling average price change (keyed by hours, e.g., "6" for 6-hour average)
+	RollingAverageChange map[string]Monetary `json:"rolling_average_change"`
+
 	// When this ticker was generated
 	CreatedAt Time `json:"created_at"`
 }

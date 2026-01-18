@@ -4,6 +4,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
+	"fmt"
 )
 
 // OrderSide tells whether an order is a buy or a sell.
@@ -36,11 +37,11 @@ func (s *OrderSide) UnmarshalJSON(in []byte) error {
 	return s.fromString(z)
 }
 
-func (s *OrderSide) String() string {
-	if z, ok := orderSides[*s]; ok {
+func (s OrderSide) String() string {
+	if z, ok := orderSides[s]; ok {
 		return z
 	}
-	panic("unsupported order side")
+	return fmt.Sprintf("OrderSide(%d)", s)
 }
 
 func (s OrderSide) Value() (driver.Value, error) {

@@ -1,9 +1,123 @@
-image: golang:latest
+image: golang:1.24
+
+stages:
+  - lint
+  - code-review
+  - test
+  - sync
+
+include:
+  - project: 'othersoftware/ci-cd'
+    file: '/templates/ai-code-review.yml'
+  - project: 'othersoftware/ci-cd'
+    file: '/templates/ci-lint.yml'
 
 default:
   tags:
     - docker
 
-test:
+variables:
+  GOPATH: $CI_PROJECT_DIR/.go
+  GOCACHE: $CI_PROJECT_DIR/.go-cache
+
+cache:
+  key: "${CI_COMMIT_REF_SLUG}"
+  paths:
+    - .go/pkg/mod/
+    - .go-cache/
+    - .go/bin/
+
+lint:go:
+  stage: lint
   script:
-    - go test -race -v ./...
+    - curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $GOPATH/bin v1.64.5
+    - $GOPATH/bin/golangci-lint run ./...
+
+security:
+  stage: test
+  script:
+    - go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
+    - $GOPATH/bin/govulncheck ./...
+  allow_failure: true
+
+test:
+  stage: test
+  script:
+    - go mod download
+    - go test -race -cover -v ./...
+  coverage: '/coverage: \d+\.\d+% of statements/'
+
+test:coverage:
+  stage: test
+  script:
+    - go mod download
+    - go test -coverprofile=coverage.out ./...
+    - go tool cover -func=coverage.out
+  artifacts:
+    paths:
+      - coverage.out
+    expire_in: 1 week
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+sync:github:
+  stage: sync
+  image: alpine:latest
+  tags:
+    - docker
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v[0-9]+\.[0-9]+\.[0-9]+$/
+  before_script:
+    - apk add --no-cache git openssh-client
+    - mkdir -p ~/.ssh
+    # Handle both File and Variable types for deploy key
+    - |
+      if [ -f "$GITHUB_DEPLOY_KEY" ]; then
+        cp "$GITHUB_DEPLOY_KEY" ~/.ssh/id_rsa
+      else
+        echo "$GITHUB_DEPLOY_KEY" > ~/.ssh/id_rsa
+      fi
+    - chmod 600 ~/.ssh/id_rsa
+    - ssh-keyscan github.com >> ~/.ssh/known_hosts
+    - git config --global user.email "ci@gitlab.com"
+    - git config --global user.name "GitLab CI"
+  script:
+    - git remote add github git@github.com:xiam/bitso-go.git 2>/dev/null || true
+
+    # Fetch GitHub remote (fails on network/auth errors, succeeds on empty repo)
+    - git fetch github
+
+    # Determine parent commit (empty if GitHub repo is new)
+    - |
+      if git rev-parse --verify github/master >/dev/null 2>&1; then
+        PARENT=$(git rev-parse github/master)
+      else
+        PARENT=""
+      fi
+
+    # Get current tree
+    - TREE=$(git write-tree)
+
+    # Create commit message
+    - |
+      MSG="Release ${CI_COMMIT_TAG}
+
+      Synced: $(date -u '+%Y-%m-%d %H:%M UTC')"
+
+    # Create clean commit (orphan if first sync, parented otherwise)
+    - |
+      if [ -z "$PARENT" ]; then
+        CLEAN_COMMIT=$(git commit-tree $TREE -m "$MSG")
+      else
+        CLEAN_COMMIT=$(git commit-tree $TREE -p $PARENT -m "$MSG")
+      fi
+
+    # Create tag pointing to clean commit (not original messy history)
+    - git tag -f ${CI_COMMIT_TAG} $CLEAN_COMMIT
+
+    # Push clean commit and retagged version to GitHub
+    - git push github $CLEAN_COMMIT:refs/heads/master --force
+    - git push github ${CI_COMMIT_TAG} --force
+  environment:
+    name: github-public
+    url: https://github.com/xiam/bitso-go/releases/tag/$CI_COMMIT_TAG

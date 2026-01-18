@@ -4,6 +4,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
+	"fmt"
 )
 
 // Operation represents the type of a transaction operation.
@@ -54,7 +55,7 @@ func (o Operation) String() string {
 	if z, ok := operationNames[o]; ok {
 		return z
 	}
-	panic("unsupported operation")
+	return fmt.Sprintf("Operation(%d)", o)
 }
 
 func (o Operation) Value() (driver.Value, error) {
