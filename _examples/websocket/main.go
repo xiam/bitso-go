@@ -17,8 +17,10 @@ func main() {
 		log.Fatal("ws.Subscribe: ", err)
 	}
 
-	for {
-		m := <-ws.Receive()
+	for m := range ws.Receive() {
 		log.Printf("message: %#v\n\n", m)
+	}
+	if err := ws.Err(); err != nil {
+		log.Fatal("ws.Receive: ", err)
 	}
 }

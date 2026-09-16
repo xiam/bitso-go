@@ -3,31 +3,50 @@ package bitso
 import (
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestBalanceJSON(t *testing.T) {
-	jsonData := `{
-		"currency": "btc",
-		"total": "1.5",
-		"locked": "0.5",
-		"available": "1.0",
-		"pending_deposit": "0.1",
-		"pending_withdrawal": "0.0"
-	}`
+	t.Run("current payload", func(t *testing.T) {
+		jsonData := `{
+			"currency": "btc",
+			"total": "100.12345678",
+			"locked": "25.00000000",
+			"available": "75.12345678"
+		}`
 
-	var balance Balance
-	err := json.Unmarshal([]byte(jsonData), &balance)
+		var balance Balance
+		err := json.Unmarshal([]byte(jsonData), &balance)
 
-	require.NoError(t, err)
-	assert.Equal(t, Currency(BTC), balance.Currency)
-	assert.Equal(t, "1.5", string(balance.Total))
-	assert.Equal(t, "0.5", string(balance.Locked))
-	assert.Equal(t, "1.0", string(balance.Available))
-	assert.Equal(t, "0.1", string(balance.PendingDeposit))
-	assert.Equal(t, "0.0", string(balance.PendingWithdrawal))
+		require.NoError(t, err, "decode current balance payload")
+		assert.Equal(t, Currency(BTC), balance.Currency, "currency should decode")
+		assert.Equal(t, "100.12345678", string(balance.Total), "total should decode")
+		assert.Equal(t, "25.00000000", string(balance.Locked), "locked balance should decode")
+		assert.Equal(t, "75.12345678", string(balance.Available), "available balance should decode")
+		assert.Empty(t, balance.PendingDeposit, "missing deprecated pending_deposit should decode as zero value")
+		assert.Empty(t, balance.PendingWithdrawal, "missing deprecated pending_withdrawal should decode as zero value")
+	})
+
+	t.Run("legacy pending fields", func(t *testing.T) {
+		jsonData := `{
+			"currency": "btc",
+			"total": "1.5",
+			"locked": "0.5",
+			"available": "1.0",
+			"pending_deposit": "0.1",
+			"pending_withdrawal": "0.0"
+		}`
+
+		var balance Balance
+		err := json.Unmarshal([]byte(jsonData), &balance)
+
+		require.NoError(t, err, "decode legacy balance pending fields")
+		assert.Equal(t, "0.1", string(balance.PendingDeposit), "deprecated pending_deposit should still decode")
+		assert.Equal(t, "0.0", string(balance.PendingWithdrawal), "deprecated pending_withdrawal should still decode")
+	})
 }
 
 func TestTickerJSON(t *testing.T) {
@@ -126,76 +145,186 @@ func TestTradeJSON(t *testing.T) {
 func TestUserTradeJSON(t *testing.T) {
 	jsonData := `{
 		"book": "btc_mxn",
-		"major": "-0.1",
-		"created_at": "2024-01-15T10:30:00+00:00",
-		"minor": "50000.00",
-		"fees_amount": "325.00",
-		"fees_currency": "mxn",
-		"price": "500000.00",
-		"tid": 12345,
-		"oid": "order123",
-		"side": "sell"
+		"major": "0.00100000",
+		"minor": "-373.40000000",
+		"major_currency": "btc",
+		"minor_currency": "mxn",
+		"price": "373400.00",
+		"side": "buy",
+		"maker_side": "sell",
+		"fees_currency": "btc",
+		"fees_amount": "0.00000650",
+		"tid": "156478321",
+		"oid": "aB3DDN4VxOMTEQZU",
+		"created_at": "2023-03-09T22:42:11+0000",
+		"origin_id": "1029384757",
+		"margin_order_type": "CROSS_MARGIN"
 	}`
 
 	var trade UserTrade
 	err := json.Unmarshal([]byte(jsonData), &trade)
 
-	require.NoError(t, err)
-	assert.Equal(t, "btc_mxn", trade.Book.String())
-	assert.Equal(t, "-0.1", string(trade.Major))
-	assert.Equal(t, "50000.00", string(trade.Minor))
-	assert.Equal(t, "325.00", string(trade.FeesAmount))
-	assert.Equal(t, Currency(MXN), trade.FeesCurrency)
-	assert.Equal(t, "500000.00", string(trade.Price))
-	assert.Equal(t, uint64(12345), trade.TID.Uint64())
-	assert.Equal(t, "order123", trade.OID)
-	assert.Equal(t, OrderSideSell, trade.Side)
+	require.NoError(t, err, "decode current user trade payload")
+	assert.Equal(t, "btc_mxn", trade.Book.String(), "book should decode")
+	assert.Equal(t, "0.00100000", string(trade.Major), "major amount should decode")
+	assert.Equal(t, "-373.40000000", string(trade.Minor), "minor amount should decode")
+	assert.Equal(t, "0.00000650", string(trade.FeesAmount), "fee amount should decode")
+	assert.Equal(t, Currency(BTC), trade.FeesCurrency, "fee currency should decode")
+	assert.Equal(t, "373400.00", string(trade.Price), "price should decode")
+	assert.Equal(t, uint64(156478321), trade.TID.Uint64(), "string tid should decode")
+	assert.Equal(t, "aB3DDN4VxOMTEQZU", trade.OID, "order id should decode")
+	assert.Equal(t, "1029384757", trade.OriginID, "origin_id should decode")
+	assert.Equal(t, OrderSideBuy, trade.Side, "user side should decode")
+	assert.Equal(t, OrderSideSell, trade.MakerSide, "maker side should decode")
+	assert.Equal(t, Currency(BTC), trade.MajorCurrency, "major currency should decode")
+	assert.Equal(t, Currency(MXN), trade.MinorCurrency, "minor currency should decode")
+	assert.Equal(t, "CROSS_MARGIN", trade.MarginOrderType, "margin order type should decode")
 }
 
 func TestUserOrderTradeJSON(t *testing.T) {
-	jsonData := `{
-		"book": "btc_mxn",
-		"major": "-0.05",
-		"created_at": "2024-01-15T10:30:00+00:00",
-		"minor": "25000.00",
-		"fees_amount": "162.50",
-		"currency": "mxn",
-		"price": "500000.00",
-		"tid": 12346,
-		"oid": "order123",
-		"side": "sell"
-	}`
+	t.Run("current fees currency field", func(t *testing.T) {
+		jsonData := `{
+			"book": "btc_mxn",
+			"major": "-0.25232073",
+			"major_currency": "btc",
+			"created_at": "2021-06-11T09:25:05.000+00:00",
+			"minor": "1013.540958479115",
+			"minor_currency": "mxn",
+			"fees_amount": "-10.237787459385",
+			"fees_currency": "mxn",
+			"price": "4057.45",
+			"tid": "51756",
+			"oid": "Jvqrschkgdkc1go3",
+			"origin_id": "origin_id1",
+			"side": "sell",
+			"maker_side": "sell"
+		}`
 
-	var trade UserOrderTrade
-	err := json.Unmarshal([]byte(jsonData), &trade)
+		var trade UserOrderTrade
+		err := json.Unmarshal([]byte(jsonData), &trade)
 
-	require.NoError(t, err)
-	assert.Equal(t, "btc_mxn", trade.Book.String())
-	assert.Equal(t, Currency(MXN), trade.FeesCurrency)
-	assert.Equal(t, "order123", trade.OID)
+		require.NoError(t, err, "decode current order trade payload")
+		assert.Equal(t, "btc_mxn", trade.Book.String(), "book should decode")
+		assert.Equal(t, "-0.25232073", string(trade.Major), "major amount should decode")
+		assert.Equal(t, Currency(BTC), trade.MajorCurrency, "major currency should decode")
+		assert.Equal(t, "1013.540958479115", string(trade.Minor), "minor amount should decode")
+		assert.Equal(t, Currency(MXN), trade.MinorCurrency, "minor currency should decode")
+		assert.Equal(t, "-10.237787459385", string(trade.FeesAmount), "fee amount should decode")
+		assert.Equal(t, Currency(MXN), trade.FeesCurrency, "current fees_currency should decode")
+		assert.Equal(t, "4057.45", string(trade.Price), "price should decode")
+		assert.Equal(t, uint64(51756), trade.TID.Uint64(), "string tid should decode")
+		assert.Equal(t, "Jvqrschkgdkc1go3", trade.OID, "order id should decode")
+		assert.Equal(t, "origin_id1", trade.OriginID, "origin_id should decode")
+		assert.Equal(t, OrderSideSell, trade.Side, "user side should decode")
+		assert.Equal(t, OrderSideSell, trade.MakerSide, "maker side should decode")
+	})
+
+	t.Run("legacy currency field", func(t *testing.T) {
+		jsonData := `{
+			"book": "btc_mxn",
+			"major": "-0.05",
+			"created_at": "2024-01-15T10:30:00+00:00",
+			"minor": "25000.00",
+			"fees_amount": "162.50",
+			"currency": "mxn",
+			"price": "500000.00",
+			"tid": 12346,
+			"oid": "order123",
+			"side": "sell"
+		}`
+
+		var trade UserOrderTrade
+		err := json.Unmarshal([]byte(jsonData), &trade)
+
+		require.NoError(t, err, "decode legacy order trade currency field")
+		assert.Equal(t, Currency(MXN), trade.FeesCurrency, "legacy currency should populate FeesCurrency")
+	})
 }
 
 func TestFeeJSON(t *testing.T) {
-	jsonData := `{
-		"book": "btc_mxn",
-		"fee_decimal": "0.0065",
-		"fee_percent": "0.65"
-	}`
+	t.Run("current payload", func(t *testing.T) {
+		jsonData := `{
+			"book": "btc_mxn",
+			"fee_percent": "0.6500",
+			"fee_decimal": "0.00650000",
+			"taker_fee_percent": "0.6500",
+			"taker_fee_decimal": "0.00650000",
+			"maker_fee_percent": "0.5000",
+			"maker_fee_decimal": "0.00500000",
+			"volume_currency": "mxn",
+			"current_volume": "4375.99",
+			"next_volume": "1500000.00",
+			"next_maker_fee_percent": "0.490",
+			"next_taker_fee_percent": "0.637"
+		}`
 
-	var fee Fee
-	err := json.Unmarshal([]byte(jsonData), &fee)
+		var fee Fee
+		err := json.Unmarshal([]byte(jsonData), &fee)
 
-	require.NoError(t, err)
-	assert.Equal(t, "btc_mxn", fee.Book.String())
-	assert.Equal(t, "0.0065", string(fee.FeeDecimal))
-	assert.Equal(t, "0.65", string(fee.FeePercent))
+		require.NoError(t, err, "decode current fee payload")
+		assert.Equal(t, "btc_mxn", fee.Book.String(), "book should decode")
+		assert.Equal(t, "0.00500000", string(fee.MakerFeeDecimal), "maker decimal fee should decode")
+		assert.Equal(t, "0.5000", string(fee.MakerFeePercent), "maker percent fee should decode")
+		assert.Equal(t, "0.00650000", string(fee.TakerFeeDecimal), "taker decimal fee should decode")
+		assert.Equal(t, "0.6500", string(fee.TakerFeePercent), "taker percent fee should decode")
+		assert.Equal(t, Currency(MXN), fee.VolumeCurrency, "volume currency should decode")
+		assert.Equal(t, "4375.99", string(fee.CurrentVolume), "current volume should decode")
+		assert.Equal(t, "1500000.00", string(fee.NextVolume), "next volume should decode")
+		assert.Equal(t, "0.490", string(fee.NextMakerFeePercent), "next maker fee should decode")
+		assert.Equal(t, "0.637", string(fee.NextTakerFeePercent), "next taker fee should decode")
+		assert.Equal(t, "0.00650000", string(fee.FeeDecimal), "deprecated fee_decimal should still decode")
+		assert.Equal(t, "0.6500", string(fee.FeePercent), "deprecated fee_percent should still decode")
+		assert.Empty(t, fee.NextFee, "missing deprecated nextFee should decode as zero value")
+		assert.Empty(t, fee.NextTakerFee, "missing deprecated nextTakerFee should decode as zero value")
+	})
+
+	t.Run("legacy camelcase fields", func(t *testing.T) {
+		jsonData := `{
+			"book": "btc_mxn",
+			"nextVolume": "1500000.00",
+			"nextFee": "0.490",
+			"nextTakerFee": "0.637"
+		}`
+
+		var fee Fee
+		err := json.Unmarshal([]byte(jsonData), &fee)
+
+		require.NoError(t, err, "decode deprecated camelcase fee fields")
+		assert.Equal(t, "1500000.00", string(fee.NextVolume), "deprecated nextVolume should populate NextVolume")
+		assert.Equal(t, "0.490", string(fee.NextFee), "deprecated nextFee should still decode")
+		assert.Equal(t, "0.637", string(fee.NextTakerFee), "deprecated nextTakerFee should still decode")
+	})
 }
 
 func TestCustomerFeesJSON(t *testing.T) {
 	jsonData := `{
 		"fees": [
-			{"book": "btc_mxn", "fee_decimal": "0.0065", "fee_percent": "0.65"},
-			{"book": "eth_mxn", "fee_decimal": "0.0065", "fee_percent": "0.65"}
+			{
+				"book": "btc_mxn",
+				"maker_fee_decimal": "0.00500000",
+				"maker_fee_percent": "0.5000",
+				"taker_fee_decimal": "0.00650000",
+				"taker_fee_percent": "0.6500",
+				"volume_currency": "mxn",
+				"current_volume": "4375.99",
+				"next_volume": "1500000.00",
+				"next_maker_fee_percent": "0.490",
+				"next_taker_fee_percent": "0.637"
+			}
+		],
+		"deposit_fees": [
+			{
+				"currency": "cop",
+				"method": "bdb",
+				"fee": "0.00",
+				"is_fixed": false
+			},
+			{
+				"currency": "ars",
+				"method": "bind",
+				"fee": "0.01",
+				"is_fixed": false
+			}
 		],
 		"withdrawal_fees": {
 			"btc": "0.0001",
@@ -207,13 +336,18 @@ func TestCustomerFeesJSON(t *testing.T) {
 	var fees CustomerFees
 	err := json.Unmarshal([]byte(jsonData), &fees)
 
-	require.NoError(t, err)
-	assert.Len(t, fees.Fees, 2)
-	assert.Equal(t, "btc_mxn", fees.Fees[0].Book.String())
-	assert.Contains(t, fees.WithdrawalFees, "btc")
-	assert.Contains(t, fees.WithdrawalFees, "eth")
-	assert.Contains(t, fees.WithdrawalFees, "mxn")
-	assert.Equal(t, "0.0001", string(fees.WithdrawalFees["btc"]))
+	require.NoError(t, err, "decode customer fees payload")
+	require.Len(t, fees.Fees, 1, "fees array should decode")
+	assert.Equal(t, "btc_mxn", fees.Fees[0].Book.String(), "book should decode")
+	require.Len(t, fees.DepositFees, 2, "deposit_fees array should decode")
+	assert.Equal(t, Currency(COP), fees.DepositFees[0].Currency, "deposit fee currency should decode")
+	assert.Equal(t, "bdb", fees.DepositFees[0].Method, "deposit fee method should decode")
+	assert.Equal(t, "0.00", string(fees.DepositFees[0].Fee), "deposit fee amount should decode")
+	assert.False(t, fees.DepositFees[0].IsFixed, "deposit fee fixed flag should decode")
+	assert.Contains(t, fees.WithdrawalFees, "btc", "withdrawal fees should include btc")
+	assert.Contains(t, fees.WithdrawalFees, "eth", "withdrawal fees should include eth")
+	assert.Contains(t, fees.WithdrawalFees, "mxn", "withdrawal fees should include mxn")
+	assert.Equal(t, "0.0001", string(fees.WithdrawalFees["btc"]), "btc withdrawal fee should decode")
 }
 
 func TestFundingJSON(t *testing.T) {
@@ -381,67 +515,99 @@ func TestOrderBookJSON(t *testing.T) {
 }
 
 func TestUserOrderJSON(t *testing.T) {
-	t.Run("complete order", func(t *testing.T) {
+	t.Run("current open order fields", func(t *testing.T) {
+		jsonData := `{
+			"book": "btc_mxn",
+			"original_amount": "0.25000000",
+			"unfilled_amount": "0.25000000",
+			"original_value": "1500.00",
+			"created_at": "2024-03-20T10:05:00.000+00:00",
+			"updated_at": "2024-03-20T10:05:00.000+00:00",
+			"price": "6000.00",
+			"oid": "k7m2nx9pqwlz4abc",
+			"origin_id": "origin_id1",
+			"side": "buy",
+			"status": "open",
+			"type": "limit",
+			"time_in_force": "goodtillcancelled",
+			"margin_order_type": "CROSS_MARGIN"
+		}`
+
+		var order UserOrder
+		err := json.Unmarshal([]byte(jsonData), &order)
+
+		require.NoError(t, err, "decode current user order payload")
+		assert.Equal(t, "btc_mxn", order.Book.String(), "book should decode")
+		assert.Equal(t, "0.25000000", string(order.OriginalAmount), "original amount should decode")
+		assert.Equal(t, "0.25000000", string(order.UnfilledAmount), "unfilled amount should decode")
+		assert.Equal(t, "k7m2nx9pqwlz4abc", order.OID, "order id should decode")
+		assert.Equal(t, "origin_id1", order.OriginID, "origin_id should decode")
+		assert.Equal(t, OrderSideBuy, order.Side, "order side should decode")
+		assert.Equal(t, OrderStatusOpen, order.Status, "order status should decode")
+		assert.Equal(t, "limit", order.Type, "order type should decode")
+		assert.Equal(t, "goodtillcancelled", order.TimeInForce, "time_in_force should decode")
+		assert.Equal(t, "CROSS_MARGIN", order.MarginOrderType, "margin_order_type should decode")
+		assert.False(t, order.UpdatedAt.Time().IsZero(), "non-null updated_at should decode")
+	})
+
+	t.Run("null updated_at", func(t *testing.T) {
 		jsonData := `{
 			"book": "btc_mxn",
 			"original_amount": "0.1",
-			"unfilled_amount": "0.0",
+			"unfilled_amount": "0.1",
 			"original_value": "50000.00",
 			"created_at": "2024-01-15T10:30:00+00:00",
-			"updated_at": "2024-01-15T10:35:00+00:00",
+			"updated_at": null,
 			"price": "500000.00",
 			"oid": "order123",
 			"side": "buy",
-			"status": "completed",
+			"status": "open",
 			"type": "limit"
 		}`
 
 		var order UserOrder
 		err := json.Unmarshal([]byte(jsonData), &order)
 
-		require.NoError(t, err)
-		assert.Equal(t, "btc_mxn", order.Book.String())
-		assert.Equal(t, "0.1", string(order.OriginalAmount))
-		assert.Equal(t, "0.0", string(order.UnfilledAmount))
-		assert.Equal(t, "order123", order.OID)
-		assert.Equal(t, OrderSideBuy, order.Side)
-		assert.Equal(t, OrderStatusCompleted, order.Status)
-		assert.Equal(t, "limit", order.Type)
+		require.NoError(t, err, "decode user order with null updated_at")
+		assert.True(t, order.UpdatedAt.Time().IsZero(), "null updated_at should decode as zero time")
 	})
 
-	t.Run("partially filled order", func(t *testing.T) {
+	t.Run("omitted updated_at", func(t *testing.T) {
 		jsonData := `{
-			"book": "eth_mxn",
-			"original_amount": "5.0",
-			"unfilled_amount": "2.5",
-			"original_value": "175000.00",
+			"book": "btc_mxn",
+			"original_amount": "0.1",
+			"unfilled_amount": "0.1",
+			"original_value": "50000.00",
 			"created_at": "2024-01-15T10:30:00+00:00",
-			"updated_at": "2024-01-15T10:35:00+00:00",
-			"price": "35000.00",
-			"oid": "order456",
-			"side": "sell",
-			"status": "partially filled",
+			"price": "500000.00",
+			"oid": "order123",
+			"side": "buy",
+			"status": "open",
 			"type": "limit"
 		}`
 
 		var order UserOrder
 		err := json.Unmarshal([]byte(jsonData), &order)
 
-		require.NoError(t, err)
-		assert.Equal(t, OrderStatusPartialFill, order.Status)
-		assert.Equal(t, OrderSideSell, order.Side)
-		assert.Equal(t, "2.5", string(order.UnfilledAmount))
+		require.NoError(t, err, "decode user order with omitted updated_at")
+		assert.True(t, order.UpdatedAt.Time().IsZero(), "omitted updated_at should keep zero time")
+		assert.Equal(t, time.Time{}, order.UpdatedAt.Time(), "omitted updated_at should equal time zero value")
 	})
 }
 
 func TestOrderPlacementJSON(t *testing.T) {
 	t.Run("limit order", func(t *testing.T) {
+		major, err := NewMonetary("0.10000000")
+		require.NoError(t, err)
+		price, err := NewMonetary("500000.00")
+		require.NoError(t, err)
+
 		order := OrderPlacement{
 			Book:  *NewBook(BTC, MXN),
 			Side:  OrderSideBuy,
 			Type:  OrderTypeLimit,
-			Major: ToMonetary(0.1),
-			Price: ToMonetary(500000),
+			Major: major,
+			Price: price,
 		}
 
 		data, err := json.Marshal(order)
@@ -450,16 +616,109 @@ func TestOrderPlacementJSON(t *testing.T) {
 		assert.Contains(t, string(data), `"book":"btc_mxn"`)
 		assert.Contains(t, string(data), `"side":"buy"`)
 		assert.Contains(t, string(data), `"type":"limit"`)
-		assert.Contains(t, string(data), `"major":"0.1`)
-		assert.Contains(t, string(data), `"price":"500000`)
+		assert.Contains(t, string(data), `"major":"0.10000000"`)
+		assert.Contains(t, string(data), `"price":"500000.00"`)
+	})
+
+	t.Run("omits optional request fields", func(t *testing.T) {
+		major, err := NewMonetary("0.10000000")
+		require.NoError(t, err, "create major amount")
+		price, err := NewMonetary("500000.00")
+		require.NoError(t, err, "create limit price")
+
+		order := OrderPlacement{
+			Book:  *NewBook(BTC, MXN),
+			Side:  OrderSideBuy,
+			Type:  OrderTypeLimit,
+			Major: major,
+			Price: price,
+		}
+
+		data, err := json.Marshal(order)
+
+		require.NoError(t, err, "marshal order placement with omitted optional fields")
+		assert.JSONEq(t, `{
+			"book": "btc_mxn",
+			"side": "buy",
+			"type": "limit",
+			"major": "0.10000000",
+			"price": "500000.00"
+		}`, string(data), "optional order-placement fields should be omitted when unset")
+	})
+
+	t.Run("encodes optional request fields", func(t *testing.T) {
+		minor, err := NewMonetary("100.00")
+		require.NoError(t, err, "create minor amount")
+		stop, err := NewMonetary("490000.00")
+		require.NoError(t, err, "create stop price")
+		slippage := 0.5
+
+		order := OrderPlacement{
+			Book:              *NewBook(BTC, MXN),
+			Side:              OrderSideBuy,
+			Type:              OrderTypeMarket,
+			Minor:             minor,
+			OriginID:          "client-order-123",
+			Stop:              stop,
+			TimeInForce:       OrderTimeInForceImmediateOrCancel,
+			SlippageTolerance: &slippage,
+			MarginOrderType:   MarginOrderTypeCrossMargin,
+		}
+
+		data, err := json.Marshal(order)
+
+		require.NoError(t, err, "marshal order placement with optional fields")
+		assert.JSONEq(t, `{
+			"book": "btc_mxn",
+			"side": "buy",
+			"type": "market",
+			"minor": "100.00",
+			"origin_id": "client-order-123",
+			"stop": "490000.00",
+			"time_in_force": "immediateorcancel",
+			"slippage_tolerance": 0.5,
+			"margin_order_type": "CROSS_MARGIN"
+		}`, string(data), "optional order-placement fields should use Bitso wire names")
+
+		var payload map[string]interface{}
+		require.NoError(t, json.Unmarshal(data, &payload), "decode marshaled order placement")
+		assert.Equal(t, 0.5, payload["slippage_tolerance"], "slippage_tolerance should encode as a JSON number")
+	})
+
+	t.Run("encodes zero slippage tolerance", func(t *testing.T) {
+		slippage := 0.0
+
+		order := OrderPlacement{
+			Book:              *NewBook(BTC, MXN),
+			Side:              OrderSideBuy,
+			Type:              OrderTypeMarket,
+			SlippageTolerance: &slippage,
+		}
+
+		data, err := json.Marshal(order)
+
+		require.NoError(t, err, "marshal order placement with zero slippage tolerance")
+		assert.JSONEq(t, `{
+			"book": "btc_mxn",
+			"side": "buy",
+			"type": "market",
+			"slippage_tolerance": 0
+		}`, string(data), "zero slippage_tolerance should not be omitted")
+
+		var payload map[string]interface{}
+		require.NoError(t, json.Unmarshal(data, &payload), "decode marshaled zero slippage order")
+		assert.Equal(t, float64(0), payload["slippage_tolerance"], "zero slippage_tolerance should encode as a JSON number")
 	})
 
 	t.Run("market order", func(t *testing.T) {
+		major, err := NewMonetary("2.0")
+		require.NoError(t, err)
+
 		order := OrderPlacement{
 			Book:  *NewBook(ETH, MXN),
 			Side:  OrderSideSell,
 			Type:  OrderTypeMarket,
-			Major: ToMonetary(2.0),
+			Major: major,
 		}
 
 		data, err := json.Marshal(order)
@@ -475,7 +734,12 @@ func TestOrderPlacementJSON(t *testing.T) {
 			"side": "buy",
 			"type": "limit",
 			"major": "0.5",
-			"price": "480000.00"
+			"price": "480000.00",
+			"origin_id": "client-order-456",
+			"stop": "470000.00",
+			"time_in_force": "fillorkill",
+			"slippage_tolerance": 0.25,
+			"margin_order_type": "CROSS_MARGIN"
 		}`
 
 		var order OrderPlacement
@@ -485,6 +749,12 @@ func TestOrderPlacementJSON(t *testing.T) {
 		assert.Equal(t, "btc_mxn", order.Book.String())
 		assert.Equal(t, OrderSideBuy, order.Side)
 		assert.Equal(t, OrderTypeLimit, order.Type)
+		assert.Equal(t, "client-order-456", order.OriginID)
+		assert.Equal(t, "470000.00", string(order.Stop))
+		assert.Equal(t, OrderTimeInForceFillOrKill, order.TimeInForce)
+		require.NotNil(t, order.SlippageTolerance, "slippage_tolerance should decode into a pointer")
+		assert.Equal(t, 0.25, *order.SlippageTolerance, "slippage_tolerance should decode from a JSON number")
+		assert.Equal(t, MarginOrderTypeCrossMargin, order.MarginOrderType)
 	})
 }
 

@@ -65,8 +65,12 @@ func (b Book) Value() (driver.Value, error) {
 }
 
 func (b *Book) Scan(value interface{}) error {
-	if value == nil {
+	s, ok, err := scanStringValue(value, "Book")
+	if err != nil {
+		return err
+	}
+	if !ok {
 		return nil
 	}
-	return b.fromString(value.(string))
+	return b.fromString(s)
 }

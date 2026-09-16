@@ -49,10 +49,14 @@ func (s OrderSide) Value() (driver.Value, error) {
 }
 
 func (s *OrderSide) Scan(value interface{}) error {
-	if value == nil {
+	z, ok, err := scanStringValue(value, "OrderSide")
+	if err != nil {
+		return err
+	}
+	if !ok {
 		return nil
 	}
-	return s.fromString(value.(string))
+	return s.fromString(z)
 }
 
 func (s *OrderSide) fromString(z string) error {

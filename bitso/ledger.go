@@ -63,10 +63,14 @@ func (o Operation) Value() (driver.Value, error) {
 }
 
 func (o *Operation) Scan(value interface{}) error {
-	if value == nil {
+	z, ok, err := scanStringValue(value, "Operation")
+	if err != nil {
+		return err
+	}
+	if !ok {
 		return nil
 	}
-	return o.fromString(value.(string))
+	return o.fromString(z)
 }
 
 // Transaction represents a transaction on the ledger.

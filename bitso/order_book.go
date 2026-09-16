@@ -33,10 +33,14 @@ type UserOrder struct {
 
 	Price Monetary `json:"price"`
 	OID   string   `json:"oid"`
+	// OriginID is the optional client-supplied order identifier.
+	OriginID string `json:"origin_id"`
 
-	Side   OrderSide   `json:"side"`
-	Status OrderStatus `json:"status"`
-	Type   string      `json:"type"`
+	Side            OrderSide   `json:"side"`
+	Status          OrderStatus `json:"status"`
+	Type            string      `json:"type"`
+	TimeInForce     string      `json:"time_in_force"`
+	MarginOrderType string      `json:"margin_order_type"`
 }
 
 // OrderPlacement represents an order that can be set by the user.
@@ -49,4 +53,10 @@ type OrderPlacement struct {
 	Major Monetary `json:"major,omitempty"`
 	Minor Monetary `json:"minor,omitempty"`
 	Price Monetary `json:"price,omitempty"`
+
+	OriginID          string           `json:"origin_id,omitempty"`
+	Stop              Monetary         `json:"stop,omitempty"`
+	TimeInForce       OrderTimeInForce `json:"time_in_force,omitempty"`
+	SlippageTolerance *float64         `json:"slippage_tolerance,omitempty"`
+	MarginOrderType   MarginOrderType  `json:"margin_order_type,omitempty"`
 }
