@@ -17,6 +17,54 @@ func TestMonetary_String(t *testing.T) {
 	assert.Equal(t, "123.456", string(m))
 }
 
+func TestNewMonetary(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{"plain decimal", "123.456"},
+		{"trailing zeros", "500000.00"},
+		{"small fraction", "0.00000001"},
+		{"precision-sensitive fraction", "0.123456789123456789"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			m, err := NewMonetary(tc.input)
+
+			require.NoError(t, err)
+			assert.Equal(t, tc.input, string(m))
+		})
+	}
+}
+
+func TestNewMonetary_Invalid(t *testing.T) {
+	tests := []string{
+		"",
+		"not-a-number",
+		"1.2.3",
+		" 1.23",
+		"1.23 ",
+	}
+
+	for _, input := range tests {
+		t.Run(input, func(t *testing.T) {
+			_, err := NewMonetary(input)
+
+			require.Error(t, err)
+		})
+	}
+}
+
+func TestNewMonetaryFromDecimal(t *testing.T) {
+	d, err := decimal.NewFromString("0.123456789123456789")
+	require.NoError(t, err)
+
+	m := NewMonetaryFromDecimal(d)
+
+	assert.Equal(t, "0.123456789123456789", string(m))
+}
+
 func TestMonetary_Float64(t *testing.T) {
 	tests := []struct {
 		monetary Monetary
@@ -40,6 +88,19 @@ func TestMonetary_Float64_Invalid(t *testing.T) {
 	m := Monetary("not-a-number")
 	result := m.Float64()
 	assert.Equal(t, float64(0), result)
+}
+
+func TestMonetary_Float64E(t *testing.T) {
+	v, err := Monetary("123.456").Float64E()
+
+	require.NoError(t, err)
+	assert.InDelta(t, 123.456, v, 0.0000001)
+}
+
+func TestMonetary_Float64E_Invalid(t *testing.T) {
+	_, err := Monetary("not-a-number").Float64E()
+
+	require.Error(t, err)
 }
 
 func TestMonetary_Decimal(t *testing.T) {
@@ -86,6 +147,18 @@ func TestToMonetary(t *testing.T) {
 	}
 }
 
+func TestToMonetary_PrecisionLossCompatibility(t *testing.T) {
+	const precise = "0.123456789123456789"
+
+	fromString, err := NewMonetary(precise)
+	require.NoError(t, err)
+
+	fromFloat := ToMonetary(0.123456789123456789)
+
+	assert.Equal(t, precise, string(fromString))
+	assert.NotEqual(t, precise, string(fromFloat))
+}
+
 func TestMonetary_JSONRoundtrip(t *testing.T) {
 	type wrapper struct {
 		Value Monetary `json:"value"`
@@ -125,6 +198,16 @@ func TestTime_UnmarshalJSON(t *testing.T) {
 			name:     "format with milliseconds",
 			json:     `"2024-01-15T10:30:00.123-06:00"`,
 			expected: time.Date(2024, 1, 15, 10, 30, 0, 123000000, time.FixedZone("", -6*60*60)),
+		},
+		{
+			name:     "RFC3339 UTC marker",
+			json:     `"2025-07-25T03:43:15Z"`,
+			expected: time.Date(2025, 7, 25, 3, 43, 15, 0, time.UTC),
+		},
+		{
+			name:     "RFC3339Nano UTC marker",
+			json:     `"2025-07-25T03:43:15.123456789Z"`,
+			expected: time.Date(2025, 7, 25, 3, 43, 15, 123456789, time.UTC),
 		},
 	}
 

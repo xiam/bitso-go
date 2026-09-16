@@ -14,6 +14,8 @@ var timeFormats = []string{
 	iso8601Time,
 	"2006-01-02T15:04:05-07:00",
 	"2006-01-02T15:04:05.000-07:00",
+	time.RFC3339Nano,
+	time.RFC3339,
 }
 
 func (t *Time) Time() time.Time {
@@ -22,6 +24,11 @@ func (t *Time) Time() time.Time {
 
 // UnmarshalJSON implements json.Unmarshal
 func (t *Time) UnmarshalJSON(in []byte) error {
+	if string(in) == "null" {
+		*t = Time(time.Time{})
+		return nil
+	}
+
 	var s string
 	if err := json.Unmarshal(in, &s); err != nil {
 		return err

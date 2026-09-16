@@ -2,12 +2,48 @@ package bitso
 
 import (
 	"encoding/json"
+	"errors"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+type recordingWebSocketDialer struct {
+	dialer *websocket.Dialer
+	calls  chan string
+}
+
+func (d *recordingWebSocketDialer) Dial(urlStr string, requestHeader http.Header) (*websocket.Conn, *http.Response, error) {
+	d.calls <- urlStr
+	return d.dialer.Dial(urlStr, requestHeader)
+}
+
+func requireWebSocketDone(t *testing.T, ws *WebSocketConn) {
+	t.Helper()
+
+	select {
+	case <-ws.Done():
+	case <-time.After(time.Second):
+		t.Fatal("timeout waiting for websocket to finish")
+	}
+}
+
+func requireReceiveClosed(t *testing.T, ws *WebSocketConn) {
+	t.Helper()
+
+	select {
+	case _, ok := <-ws.Receive():
+		assert.False(t, ok)
+	case <-time.After(time.Second):
+		t.Fatal("timeout waiting for receive channel to close")
+	}
+}
 
 func TestWebSocketReply_UnmarshalJSON(t *testing.T) {
 	t.Run("subscribe response", func(t *testing.T) {
@@ -330,6 +366,194 @@ func TestWebSocketConn_Receive(t *testing.T) {
 	case <-time.After(1 * time.Second):
 		t.Fatal("timeout waiting for message")
 	}
+}
+
+func TestNewWebSocketConn_WithEndpointAndDialer_SubscribeAndDispatch(t *testing.T) {
+	upgrader := websocket.Upgrader{}
+	subscriptions := make(chan WebSocketMessage, 1)
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		conn, err := upgrader.Upgrade(w, r, nil)
+		if !assert.NoError(t, err, "upgrade websocket connection") {
+			return
+		}
+		defer conn.Close()
+
+		var msg WebSocketMessage
+		if !assert.NoError(t, conn.ReadJSON(&msg), "read subscription message") {
+			return
+		}
+		subscriptions <- msg
+
+		err = conn.WriteJSON(map[string]interface{}{
+			"type": "trades",
+			"book": "btc_mxn",
+			"payload": []map[string]interface{}{
+				{
+					"i":  uint64(12345),
+					"a":  "0.5",
+					"r":  "500000.00",
+					"v":  "250000.00",
+					"t":  "0",
+					"x":  uint64(1705312200000),
+					"mo": "maker-order-123",
+					"to": "taker-order-456",
+				},
+			},
+		})
+		assert.NoError(t, err, "write trade message")
+	}))
+	defer server.Close()
+
+	endpoint := "ws" + strings.TrimPrefix(server.URL, "http")
+	dialer := &recordingWebSocketDialer{
+		dialer: websocket.DefaultDialer,
+		calls:  make(chan string, 1),
+	}
+
+	ws, err := NewWebSocketConn(
+		WithWebSocketEndpoint(endpoint),
+		WithWebSocketDialer(dialer),
+	)
+	require.NoError(t, err)
+	defer ws.Close()
+
+	select {
+	case dialedEndpoint := <-dialer.calls:
+		assert.Equal(t, endpoint, dialedEndpoint)
+	case <-time.After(time.Second):
+		t.Fatal("timeout waiting for dialer call")
+	}
+
+	book := NewBook(BTC, MXN)
+	require.NoError(t, ws.Subscribe(book, "trades"))
+
+	select {
+	case msg := <-subscriptions:
+		assert.Equal(t, "subscribe", msg.Action)
+		assert.Equal(t, "btc_mxn", msg.Book.String())
+		assert.Equal(t, "trades", msg.Type)
+	case <-time.After(time.Second):
+		t.Fatal("timeout waiting for subscription")
+	}
+
+	select {
+	case received := <-ws.Receive():
+		trade, ok := received.(WebSocketTrade)
+		require.True(t, ok)
+		assert.Equal(t, "btc_mxn", trade.Book.String())
+		require.Len(t, trade.Payload, 1)
+		assert.Equal(t, uint64(12345), trade.Payload[0].TID)
+		assert.Equal(t, "0.5", string(trade.Payload[0].Amount))
+	case <-time.After(time.Second):
+		t.Fatal("timeout waiting for dispatched trade")
+	}
+}
+
+func TestWebSocketConn_CloseClosesReceiveAndDone(t *testing.T) {
+	upgrader := websocket.Upgrader{}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		conn, err := upgrader.Upgrade(w, r, nil)
+		if !assert.NoError(t, err, "upgrade websocket connection") {
+			return
+		}
+		defer conn.Close()
+
+		_, _, _ = conn.ReadMessage()
+	}))
+	defer server.Close()
+
+	ws, err := NewWebSocketConn(WithWebSocketEndpoint("ws" + strings.TrimPrefix(server.URL, "http")))
+	require.NoError(t, err)
+
+	require.NoError(t, ws.Close())
+	require.NoError(t, ws.Close())
+	requireWebSocketDone(t, ws)
+	requireReceiveClosed(t, ws)
+	assert.NoError(t, ws.Err())
+}
+
+func TestWebSocketConn_RemoteCloseReportsReadError(t *testing.T) {
+	upgrader := websocket.Upgrader{}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		conn, err := upgrader.Upgrade(w, r, nil)
+		if !assert.NoError(t, err, "upgrade websocket connection") {
+			return
+		}
+		defer conn.Close()
+
+		err = conn.WriteControl(
+			websocket.CloseMessage,
+			websocket.FormatCloseMessage(websocket.CloseNormalClosure, "bye"),
+			time.Now().Add(time.Second),
+		)
+		assert.NoError(t, err, "write websocket close frame")
+	}))
+	defer server.Close()
+
+	ws, err := NewWebSocketConn(WithWebSocketEndpoint("ws" + strings.TrimPrefix(server.URL, "http")))
+	require.NoError(t, err)
+
+	requireWebSocketDone(t, ws)
+	requireReceiveClosed(t, ws)
+
+	var closeErr *websocket.CloseError
+	require.ErrorAs(t, ws.Err(), &closeErr)
+	assert.Equal(t, websocket.CloseNormalClosure, closeErr.Code)
+}
+
+func TestWebSocketConn_InvalidMessageClosesReceiveWithError(t *testing.T) {
+	upgrader := websocket.Upgrader{}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		conn, err := upgrader.Upgrade(w, r, nil)
+		if !assert.NoError(t, err, "upgrade websocket connection") {
+			return
+		}
+		defer conn.Close()
+
+		assert.NoError(t, conn.WriteMessage(websocket.TextMessage, []byte("{")), "write invalid JSON message")
+	}))
+	defer server.Close()
+
+	ws, err := NewWebSocketConn(WithWebSocketEndpoint("ws" + strings.TrimPrefix(server.URL, "http")))
+	require.NoError(t, err)
+
+	requireWebSocketDone(t, ws)
+	requireReceiveClosed(t, ws)
+	require.Error(t, ws.Err())
+	assert.Contains(t, ws.Err().Error(), "websocket unmarshal message")
+}
+
+func TestWebSocketConn_SubscribeAfterClose(t *testing.T) {
+	upgrader := websocket.Upgrader{}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		conn, err := upgrader.Upgrade(w, r, nil)
+		if !assert.NoError(t, err, "upgrade websocket connection") {
+			return
+		}
+		defer conn.Close()
+
+		_, _, _ = conn.ReadMessage()
+	}))
+	defer server.Close()
+
+	ws, err := NewWebSocketConn(WithWebSocketEndpoint("ws" + strings.TrimPrefix(server.URL, "http")))
+	require.NoError(t, err)
+
+	require.NoError(t, ws.Close())
+	requireWebSocketDone(t, ws)
+
+	err = ws.Subscribe(NewBook(BTC, MXN), "trades")
+	require.Error(t, err)
+	assert.True(t, errors.Is(err, ErrWebSocketClosed))
+}
+
+func TestWebSocketConn_SubscribeWithoutConnection(t *testing.T) {
+	ws := &WebSocketConn{}
+
+	err := ws.Subscribe(NewBook(BTC, MXN), "trades")
+	require.Error(t, err)
+	assert.True(t, errors.Is(err, ErrWebSocketClosed))
 }
 
 func TestWebSocketConn_Close_Nil(t *testing.T) {

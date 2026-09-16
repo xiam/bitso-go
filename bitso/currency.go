@@ -3,6 +3,7 @@ package bitso
 import (
 	"database/sql/driver"
 	"encoding/json"
+	"fmt"
 	"strings"
 )
 
@@ -112,7 +113,27 @@ func (c Currency) Value() (driver.Value, error) {
 	return c.String(), nil
 }
 
+func scanStringValue(value interface{}, target string) (string, bool, error) {
+	switch v := value.(type) {
+	case nil:
+		return "", false, nil
+	case string:
+		return v, true, nil
+	case []byte:
+		return string(v), true, nil
+	default:
+		return "", false, fmt.Errorf("cannot scan %T into %s: expected string, []byte, or nil", value, target)
+	}
+}
+
 func (c *Currency) Scan(value interface{}) error {
-	*c = ToCurrency(value.(string))
+	s, ok, err := scanStringValue(value, "Currency")
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return nil
+	}
+	*c = ToCurrency(s)
 	return nil
 }
